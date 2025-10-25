@@ -1,4 +1,3 @@
-# main.py
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -9,7 +8,7 @@ import threading
 
 app = FastAPI()
 
-current_image = "/static/default.png"
+current_expression = "neutral"
 
 class ConnectionManager:
     def __init__(self):
@@ -18,14 +17,17 @@ class ConnectionManager:
     async def connect(self, websocket: WebSocket):
         await websocket.accept()
         self.active_connections.append(websocket)
-        await self.send_current_image(websocket)
+        await self.send_current_expression(websocket)
 
     def disconnect(self, websocket: WebSocket):
         if websocket in self.active_connections:
             self.active_connections.remove(websocket)
 
-    async def send_current_image(self, websocket: WebSocket):
-        await websocket.send_text(json.dumps({"type": "image_update", "image": current_image}))
+    async def send_current_expression(self, websocket: WebSocket):
+        await websocket.send_text(json.dumps({
+            "type": "face_expression", 
+            "expression": current_expression
+        }))
 
     async def broadcast(self, message: str):
         for connection in self.active_connections:
@@ -40,7 +42,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/")
 async def read_index():
-    return FileResponse("templates/index.html")
+    return FileResponse("templates/face.html")
 
 @app.get("/casino")
 async def read_casino():
@@ -55,14 +57,17 @@ async def websocket_endpoint(websocket: WebSocket):
     except WebSocketDisconnect:
         manager.disconnect(websocket)
 
-class ImageChange(BaseModel):
-    image: str
+class FaceExpression(BaseModel):
+    expression: str
 
-@app.post("/change-image")
-async def change_image(data: ImageChange):
-    global current_image
-    current_image = data.image
-    await manager.broadcast(json.dumps({"type": "image_update", "image": current_image}))
+@app.post("/change-expression")
+async def change_expression(data: FaceExpression):
+    global current_expression
+    current_expression = data.expression
+    await manager.broadcast(json.dumps({
+        "type": "face_expression", 
+        "expression": current_expression
+    }))
     return {"status": "success"}
 
 @app.post("/casino/spin")

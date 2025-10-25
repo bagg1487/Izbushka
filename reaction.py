@@ -1,14 +1,51 @@
 # reaction.py
-import os
 import random
 
-def get_random_reaction():
-    # Получаем все файлы из папки static кроме default.png
-    static_files = [f for f in os.listdir('static') 
-                   if os.path.isfile(os.path.join('static', f)) 
-                   and f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif'))
-                   and f != 'default.png']
-    
-    if static_files:
-        return f"/static/{random.choice(static_files)}"
-    return "/static/default.png"
+FACE_EXPRESSIONS = {
+    "neutral": {
+        "eyes": "normal",
+        "eyebrows": "normal", 
+        "mouth": "neutral"
+    },
+    "happy": {
+        "eyes": "happy",
+        "eyebrows": "relaxed",
+        "mouth": "smile"
+    },
+    "laughing": {
+        "eyes": "closed",
+        "eyebrows": "raised",
+        "mouth": "laugh"
+    },
+    "surprised": {
+        "eyes": "wide",
+        "eyebrows": "raised",
+        "mouth": "open"
+    },
+    "angry": {
+        "eyes": "angry",
+        "eyebrows": "angry",
+        "mouth": "frown"
+    },
+    "sad": {
+        "eyes": "sad",
+        "eyebrows": "worried",
+        "mouth": "sad"
+    },
+    "winking": {
+        "eyes": "wink",
+        "eyebrows": "raised",
+        "mouth": "smirk"
+    },
+    "sleepy": {
+        "eyes": "sleepy",
+        "eyebrows": "relaxed",
+        "mouth": "neutral"
+    }
+}
+
+def get_random_expression():
+    return random.choice(list(FACE_EXPRESSIONS.keys()))
+
+def get_expression_data(expression_name):
+    return FACE_EXPRESSIONS.get(expression_name, FACE_EXPRESSIONS["neutral"])

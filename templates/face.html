@@ -1,0 +1,531 @@
+<!-- templates/face.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Избушка - Анимированное лицо</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #1a1a1a;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+            transition: background 0.5s ease;
+        }
+
+        .face-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Брови */
+        .eyebrows {
+            position: absolute;
+            top: 20vh;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            gap: 20vw;
+            z-index: 20;
+        }
+
+        .eyebrow {
+            width: 10vw;
+            height: 1.5vw;
+            background: #2c2c2c;
+            border-radius: 0.8vw;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 0.2vw 0.8vw rgba(0,0,0,0.3);
+        }
+
+        .eyebrow.left {
+            transform-origin: right center;
+        }
+
+        .eyebrow.right {
+            transform-origin: left center;
+        }
+
+        /* Глаза */
+        .eyes {
+            position: absolute;
+            top: 30vh;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            gap: 12vw;
+            z-index: 10;
+        }
+
+        .eye-container {
+            position: relative;
+            width: 14vw;
+            height: 9vw;
+        }
+
+        .eye {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(145deg, #ffffff, #f0f0f0);
+            border-radius: 50%;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 
+                inset 0 -0.6vw 1.5vw rgba(0,0,0,0.15),
+                0 0.8vw 2.5vw rgba(0,0,0,0.3);
+            border: 0.2vw solid #e8e8e8;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Веки - строго внутри границ глаз */
+        .eyelid {
+            position: absolute;
+            left: 0;
+            width: 100%;
+            height: 4.5vw;
+            background: #1a1a1a;
+            border-radius: 50%;
+            z-index: 15;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 0.15vw solid #333;
+        }
+
+        .eyelid.upper {
+            top: -2.2vw;
+        }
+
+        .eyelid.lower {
+            bottom: -2.2vw;
+        }
+
+        /* Зрачки */
+        .pupil {
+            width: 4.5vw;
+            height: 4.5vw;
+            background: radial-gradient(circle at 30% 30%, #0d47a1, #1976d2);
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 
+                inset 0 -0.4vw 0.8vw rgba(0,0,0,0.4),
+                0 0.2vw 0.8vw rgba(0,0,0,0.3);
+            z-index: 5;
+        }
+
+        .pupil::before {
+            content: '';
+            position: absolute;
+            width: 1.8vw;
+            height: 1.8vw;
+            background: radial-gradient(circle, #ffffff, #e3f2fd);
+            border-radius: 50%;
+            top: 0.8vw;
+            left: 0.8vw;
+            filter: blur(0.08vw);
+        }
+
+        .pupil::after {
+            content: '';
+            position: absolute;
+            width: 0.7vw;
+            height: 0.7vw;
+            background: rgba(255,255,255,0.9);
+            border-radius: 50%;
+            top: 0.4vw;
+            left: 0.4vw;
+        }
+
+        /* Рот */
+        .mouth-container {
+            position: absolute;
+            bottom: 25vh;
+            width: 20vw;
+            height: 10vw;
+            z-index: 10;
+        }
+
+        .mouth {
+            width: 100%;
+            height: 5vw;
+            background: linear-gradient(to bottom, #e53935, #c62828);
+            border-radius: 0 0 10vw 10vw;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 
+                inset 0 -0.4vw 1.5vw rgba(0,0,0,0.4),
+                0 0.6vw 1.8vw rgba(0,0,0,0.25);
+            border: 0.15vw solid #b71c1c;
+        }
+
+        .tongue {
+            position: absolute;
+            bottom: -3vw;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 8vw;
+            height: 4vw;
+            background: linear-gradient(to bottom, #ff8a80, #ff5252);
+            border-radius: 50%;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 0;
+        }
+
+        .teeth {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 85%;
+            height: 1.5vw;
+            background: linear-gradient(to bottom, #ffffff, #f5f5f5);
+            border-radius: 0.8vw 0.8vw 0 0;
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+
+        /* Слезы */
+        .tear {
+            position: absolute;
+            width: 0.3vw;
+            height: 0.3vw;
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+            border-radius: 50%;
+            opacity: 0;
+            z-index: 20;
+            filter: blur(0.08vw);
+        }
+
+        .tear.falling {
+            animation: tearFall 2s ease-out forwards;
+        }
+
+        @keyframes tearFall {
+            0% {
+                transform: translateY(0) scale(1);
+                opacity: 0.8;
+            }
+            100% {
+                transform: translateY(12vh) scale(0.2);
+                opacity: 0;
+            }
+        }
+
+        /* Информация */
+        .expression-info {
+            position: absolute;
+            bottom: 8vh;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 1.8vw;
+            font-weight: bold;
+            text-align: center;
+            background: rgba(0,0,0,0.7);
+            padding: 0.8vw 1.8vw;
+            border-radius: 1.8vw;
+            backdrop-filter: blur(10px);
+            z-index: 30;
+        }
+
+        .voice-info {
+            position: absolute;
+            top: 5vh;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 1.3vw;
+            text-align: center;
+            background: rgba(0,0,0,0.7);
+            padding: 0.8vw 1.5vw;
+            border-radius: 1.3vw;
+            backdrop-filter: blur(10px);
+            z-index: 30;
+        }
+
+        /* Анимации выражений - веки остаются строго в пределах глаз */
+        
+        /* Нейтральное */
+        .neutral .eyebrow.left { transform: rotate(-2deg); }
+        .neutral .eyebrow.right { transform: rotate(2deg); }
+        .neutral .eyelid.upper { top: -1.5vw; }
+        .neutral .eyelid.lower { bottom: -1.5vw; }
+        .neutral .mouth { height: 2.5vw; border-radius: 1.2vw; }
+
+        /* Радость */
+        .happy .eyebrow.left { transform: rotate(-6deg) translateY(-0.3vw); }
+        .happy .eyebrow.right { transform: rotate(6deg) translateY(-0.3vw); }
+        .happy .eyelid.upper { top: -3vw; }
+        .happy .eyelid.lower { bottom: -0.3vw; }
+        .happy .pupil { transform: translate(-50%, -55%) scale(1.1); }
+        .happy .mouth { 
+            height: 6vw; 
+            animation: smilePulse 2s ease-in-out infinite;
+        }
+
+        @keyframes smilePulse {
+            0%, 100% { height: 6vw; }
+            50% { height: 6.2vw; }
+        }
+
+        /* Смех */
+        .laughing .eyebrow.left { transform: rotate(-8deg) translateY(-0.5vw); }
+        .laughing .eyebrow.right { transform: rotate(8deg) translateY(-0.5vw); }
+        .laughing .eyelid.upper { top: -3.5vw; }
+        .laughing .eyelid.lower { bottom: -0.1vw; }
+        .laughing .pupil { transform: translate(-50%, -60%) scale(1.15); }
+        .laughing .mouth { 
+            height: 7vw; 
+            border-radius: 50%;
+            animation: laugh 0.8s ease-in-out infinite;
+        }
+        .laughing .tongue { 
+            opacity: 1; 
+            bottom: -1.5vw;
+            animation: tongueLaugh 0.8s ease-in-out infinite;
+        }
+
+        @keyframes laugh {
+            0%, 100% { height: 7vw; }
+            50% { height: 7.3vw; }
+        }
+
+        @keyframes tongueLaugh {
+            0%, 100% { bottom: -1.5vw; }
+            50% { bottom: -1.2vw; }
+        }
+
+        /* Удивление */
+        .surprised .eyebrow.left { transform: rotate(-10deg) translateY(-1vw); }
+        .surprised .eyebrow.right { transform: rotate(10deg) translateY(-1vw); }
+        .surprised .eyelid.upper { top: -4vw; }
+        .surprised .eyelid.lower { bottom: -4vw; }
+        .surprised .pupil { transform: translate(-50%, -50%) scale(0.9); }
+        .surprised .mouth { 
+            height: 6.5vw; 
+            border-radius: 50%;
+            animation: surprisedMouth 3s ease-in-out infinite;
+        }
+        .surprised .teeth { opacity: 1; }
+
+        @keyframes surprisedMouth {
+            0%, 100% { height: 6.5vw; }
+            50% { height: 6.7vw; }
+        }
+
+        /* Злость */
+        .angry .eyebrow.left { transform: rotate(8deg) translateY(0.3vw); }
+        .angry .eyebrow.right { transform: rotate(-8deg) translateY(0.3vw); }
+        .angry .eyelid.upper { top: -0.5vw; }
+        .angry .eyelid.lower { bottom: -3vw; }
+        .angry .pupil { transform: translate(-50%, -35%) scale(0.95); }
+        .angry .mouth { 
+            height: 2vw; 
+            border-radius: 8vw 8vw 0 0;
+            background: linear-gradient(to bottom, #c62828, #b71c1c);
+            animation: angryMouth 1s ease-in-out infinite;
+        }
+
+        @keyframes angryMouth {
+            0%, 100% { height: 2vw; }
+            50% { height: 2.2vw; }
+        }
+
+        /* Грусть */
+        .sad .eyebrow.left { transform: rotate(4deg) translateY(0.5vw); }
+        .sad .eyebrow.right { transform: rotate(-4deg) translateY(0.5vw); }
+        .sad .eyelid.upper { top: -0.8vw; }
+        .sad .eyelid.lower { bottom: -2.2vw; }
+        .sad .pupil { transform: translate(-50%, -60%) scale(0.9); }
+        .sad .mouth { 
+            height: 1.8vw; 
+            border-radius: 8vw 8vw 0 0;
+            animation: sadMouth 4s ease-in-out infinite;
+        }
+
+        @keyframes sadMouth {
+            0%, 100% { height: 1.8vw; }
+            50% { height: 1.6vw; }
+        }
+
+        /* Подмигивание */
+        .winking .eyebrow.left { transform: rotate(-4deg) translateY(-0.2vw); }
+        .winking .eyebrow.right { transform: rotate(2deg) translateY(-0.2vw); }
+        .winking .eyelid.upper.left { top: 2.2vw; }
+        .winking .eyelid.lower.left { bottom: 2.2vw; }
+        .winking .mouth { 
+            height: 3.5vw;
+            border-radius: 0 0 8vw 0;
+            animation: winkMouth 3s ease-in-out infinite;
+        }
+
+        @keyframes winkMouth {
+            0%, 100% { height: 3.5vw; }
+            50% { height: 3.6vw; }
+        }
+
+        /* Сон */
+        .sleeping .eyebrow.left { transform: rotate(-2deg); }
+        .sleeping .eyebrow.right { transform: rotate(2deg); }
+        .sleeping .eyelid.upper { top: 2.2vw; }
+        .sleeping .eyelid.lower { bottom: 2.2vw; }
+        .sleeping .mouth { 
+            height: 1.2vw;
+            animation: sleepingBreath 4s ease-in-out infinite;
+        }
+
+        @keyframes sleepingBreath {
+            0%, 100% { height: 1.2vw; }
+            50% { height: 1.1vw; }
+        }
+    </style>
+</head>
+<body class="neutral">
+    <div class="voice-info">
+        🎤 Скажите: "Избушка реакция", "Избушка радость", "Избушка злость" и др.
+    </div>
+
+    <div class="face-container">
+        <!-- Брови -->
+        <div class="eyebrows">
+            <div class="eyebrow left"></div>
+            <div class="eyebrow right"></div>
+        </div>
+
+        <!-- Глаза с веками -->
+        <div class="eyes">
+            <div class="eye-container">
+                <div class="eyelid upper left"></div>
+                <div class="eye left">
+                    <div class="pupil"></div>
+                    <div class="tear tear-left-1"></div>
+                    <div class="tear tear-left-2"></div>
+                </div>
+                <div class="eyelid lower left"></div>
+            </div>
+            <div class="eye-container">
+                <div class="eyelid upper right"></div>
+                <div class="eye right">
+                    <div class="pupil"></div>
+                    <div class="tear tear-right-1"></div>
+                    <div class="tear tear-right-2"></div>
+                </div>
+                <div class="eyelid lower right"></div>
+            </div>
+        </div>
+
+        <!-- Рот -->
+        <div class="mouth-container">
+            <div class="mouth">
+                <div class="teeth"></div>
+                <div class="tongue"></div>
+            </div>
+        </div>
+
+        <div class="expression-info" id="expressionInfo">😊 Нейтрально</div>
+    </div>
+
+    <script>
+        const ws = new WebSocket('ws://localhost:8000/ws');
+        
+        const expressions = {
+            "neutral": { name: "😊 Нейтрально", bg: "#1a1a1a" },
+            "happy": { name: "😄 Радость", bg: "#2d5a27" },
+            "laughing": { name: "😂 Смех", bg: "#1e3a5f" },
+            "surprised": { name: "😯 Удивление", bg: "#5d4037" },
+            "angry": { name: "😠 Злость", bg: "#5d1f1f" },
+            "sad": { name: "😢 Грусть", bg: "#2d3e50" },
+            "winking": { name: "😉 Подмигивание", bg: "#4a235a" },
+            "sleepy": { name: "😴 Сон", bg: "#1b4f72" }
+        };
+
+        let currentExpression = "neutral";
+        let tearInterval;
+
+        function createTears() {
+            const tears = document.querySelectorAll('.tear');
+            tears.forEach(tear => {
+                tear.style.left = Math.random() * 10 + 2 + 'vw';
+                tear.style.top = '0.8vw';
+                tear.classList.add('falling');
+                
+                setTimeout(() => {
+                    tear.classList.remove('falling');
+                    tear.style.opacity = '0';
+                }, 2000);
+            });
+        }
+
+        function setExpression(expression) {
+            const exprData = expressions[expression] || expressions.neutral;
+            
+            // Плавное изменение фона
+            document.body.style.background = exprData.bg;
+            
+            // Убираем все классы выражений
+            Object.keys(expressions).forEach(expr => {
+                document.body.classList.remove(expr);
+            });
+            
+            // Добавляем текущее выражение
+            document.body.classList.add(expression);
+            document.getElementById('expressionInfo').textContent = exprData.name;
+            
+            // Останавливаем слезы если были
+            if (tearInterval) {
+                clearInterval(teerInterval);
+                tearInterval = null;
+            }
+            
+            // Запускаем слезы для смеха
+            if (expression === "laughing") {
+                createTears();
+                tearInterval = setInterval(createTears, 1200);
+            }
+            
+            currentExpression = expression;
+        }
+
+        ws.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            if (data.type === 'face_expression') {
+                setExpression(data.expression);
+            }
+        };
+
+        // Автоматическая демонстрация выражений
+        let demoInterval = setInterval(() => {
+            const expressionsList = Object.keys(expressions);
+            const randomIndex = Math.floor(Math.random() * expressionsList.length);
+            const randomExpr = expressionsList[randomIndex];
+            if (randomExpr !== currentExpression) {
+                setExpression(randomExpr);
+            }
+        }, 4000);
+
+        // Остановить демо при клике
+        document.addEventListener('click', () => {
+            clearInterval(demoInterval);
+        });
+
+        // Инициализация
+        setExpression('neutral');
+    </script>
+</body>
+</html>
