@@ -25,7 +25,7 @@ class ConnectionManager:
 
     async def send_current_expression(self, websocket: WebSocket):
         await websocket.send_text(json.dumps({
-            "type": "face_expression", 
+            "type": "face_expression",
             "expression": current_expression
         }))
 
@@ -65,7 +65,7 @@ async def change_expression(data: FaceExpression):
     global current_expression
     current_expression = data.expression
     await manager.broadcast(json.dumps({
-        "type": "face_expression", 
+        "type": "face_expression",
         "expression": current_expression
     }))
     return {"status": "success"}
@@ -75,13 +75,16 @@ async def casino_spin():
     await manager.broadcast(json.dumps({"type": "casino_spin"}))
     return {"status": "success"}
 
+
 def start_voice_processor():
     from audio import VoiceProcessor
     voice_processor = VoiceProcessor()
-    voice_processor.listen()
+    voice_processor.listen()  # запускает слушание микрофона
+
 
 if __name__ == "__main__":
     voice_thread = threading.Thread(target=start_voice_processor)
     voice_thread.daemon = True
     voice_thread.start()
+
     uvicorn.run(app, host="127.0.0.1", port=8000)
