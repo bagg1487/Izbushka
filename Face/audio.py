@@ -23,9 +23,8 @@ class VoiceProcessor:
 
         self.recognizer = sr.Recognizer()
 
-        # ОБЯЗАТЕЛЬНО: укажи свой device_index!
         self.microphone = sr.Microphone(
-            device_index=4,      # ← ВСТАВЬ СВОЙ ИНДЕКС
+            device_index=4,
             sample_rate=48000,
             chunk_size=2048
         )
