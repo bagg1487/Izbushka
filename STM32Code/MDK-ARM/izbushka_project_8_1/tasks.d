@@ -1,0 +1,16 @@
+izbushka_project_8_1\tasks.o: ../Middlewares/Third_Party/FreeRTOS/Source/tasks.c
+izbushka_project_8_1\tasks.o: C:\Keil\ARM\ARMCC\bin\..\include\stdlib.h
+izbushka_project_8_1\tasks.o: C:\Keil\ARM\ARMCC\bin\..\include\string.h
+izbushka_project_8_1\tasks.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/FreeRTOS.h
+izbushka_project_8_1\tasks.o: C:\Keil\ARM\ARMCC\bin\..\include\stddef.h
+izbushka_project_8_1\tasks.o: C:\Keil\ARM\ARMCC\bin\..\include\stdint.h
+izbushka_project_8_1\tasks.o: ..\Core\Inc\FreeRTOSConfig.h
+izbushka_project_8_1\tasks.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/projdefs.h
+izbushka_project_8_1\tasks.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/portable.h
+izbushka_project_8_1\tasks.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/deprecated_definitions.h
+izbushka_project_8_1\tasks.o: ../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F/portmacro.h
+izbushka_project_8_1\tasks.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/mpu_wrappers.h
+izbushka_project_8_1\tasks.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/task.h
+izbushka_project_8_1\tasks.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/list.h
+izbushka_project_8_1\tasks.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/timers.h
+izbushka_project_8_1\tasks.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/stack_macros.h
