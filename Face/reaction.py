@@ -1,4 +1,3 @@
-# reaction.py
 import random
 
 FACE_EXPRESSIONS = {
