@@ -151,17 +151,21 @@ function mouthAnimation() {
     setTimeout(mouthAnimation, 150);
 }
 
-async function fetchExpression() {
-    try {
-        const res = await fetch('/current-expression');
-        const data = await res.json();
-        setExpression(data.expression);
-        if(data.speaking) speakAnimation(true); else speakAnimation(false);
-    } catch(e) { console.log(e); }
-    setTimeout(fetchExpression, 200);
-}
+const ws = new WebSocket("ws://127.0.0.1:8000/ws");
 
-fetchExpression();
+ws.onopen = () => console.log("WS connected");
+ws.onmessage = (event) => {
+    const msg = JSON.parse(event.data);
+
+    if (msg.type === "face_expression") {
+        setExpression(msg.expression);
+    }
+
+    if (msg.type === "speaking") {
+        speakAnimation(msg.on);
+    }
+};
+
 </script>
 </body>
 </html>

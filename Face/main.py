@@ -1,3 +1,7 @@
+import webbrowser
+import asyncio
+from reaction import get_random_expression
+
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -5,9 +9,6 @@ from pydantic import BaseModel
 import json
 import uvicorn
 import threading
-import webbrowser
-import asyncio
-from reaction import get_random_expression
 
 app = FastAPI()
 # hello
@@ -43,7 +44,7 @@ manager = ConnectionManager()
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-@app.websocket("/ws/diagnostics") # временный эндпоинт для проверки работоспособности кода
+@app.websocket("/ws/diagnostics")
 async def diagnostics_websocket(websocket: WebSocket):
     await websocket.accept()
     try:
@@ -159,5 +160,15 @@ async def text_command(data: TextCommand):
     
     return {"status": "error", "message": "Неизвестная команда"}
 
+def start_voice_processor():
+    from audio import VoiceProcessor
+    voice_processor = VoiceProcessor()
+    voice_processor.listen()  # запускает слушание микрофона
+
+
 if __name__ == "__main__":
+    voice_thread = threading.Thread(target=start_voice_processor)
+    voice_thread.daemon = True
+    voice_thread.start()
+
     uvicorn.run(app, host="127.0.0.1", port=8000)
