@@ -1,109 +1,127 @@
-# import serial
-# import time
-# import json
-# import requests
-# from datetime import datetime
-#
-# PORT = "/dev/ttyUSB0"
-# BAUD = 115200
-#
-# latest_sensor_data = {
-#     "timestamp": "",
-#     "temperature": 0,
-#     "humidity": 0,
-#     "pressure": 0,
-#     "gas": 0,
-#     "light": 0
-# }
-#
-#
-# def read_sensor_data():
-#     global latest_sensor_data
-#     try:
-#         ser = serial.Serial(PORT, BAUD, timeout=1)
-#         print("Reading sensor data...\n")
-#
-#         while True:
-#             try:
-#                 line = ser.readline().decode("utf-8", errors="ignore").strip()
-#                 if line:
-#                     print(">>>", line)
-#                     try:
-#                         data = json.loads(line)
-#                         if all(key in data for key in ['temperature', 'humidity', 'pressure', 'gas', 'light']):
-#                             latest_sensor_data.update(data)
-#                             latest_sensor_data['timestamp'] = datetime.now().isoformat()
-#                     except:
-#                         pass
-#             except KeyboardInterrupt:
-#                 print("Stopped.")
-#                 break
-#             except Exception as e:
-#                 print(f"Error: {e}")
-#                 time.sleep(1)
-#
-#     except Exception as e:
-#         print(f"Serial error: {e}")
-#
-#
-# def get_latest_sensor_data():
-#     return latest_sensor_data.copy()
-#
-#
-# if __name__ == "__main__":
-#     read_sensor_data()
+import serial
 import time
-import json
-import random
-from datetime import datetime
-
-latest_sensor_data = {
-    "timestamp": "",
-    "temperature": 0,
-    "humidity": 0,
-    "pressure": 0,
-    "gas": 0,
-    "light": 0
-}
+import sys
 
 
-def read_sensor_data():
-    global latest_sensor_data
-    print("Generating mock sensor data...\n")
+def test_com5():
+    print("=" * 60)
+    print("Проверка COM5 (CP210x)")
+    print("=" * 60)
 
-    base_temp = 22.0
-    base_humidity = 45.0
-    base_pressure = 1013.0
-    base_gas = 150
-    base_light = 300
+    port = "COM5"
+    baudrates = [9600]
 
-    while True:
+    for baud in baudrates:
+        print(f"\n📡 Пробуем {baud} бод...")
+
         try:
-            mock_data = {
-                "temperature": round(base_temp + random.uniform(-2, 2), 1),
-                "humidity": round(base_humidity + random.uniform(-5, 5), 1),
-                "pressure": round(base_pressure + random.uniform(-10, 10), 1),
-                "gas": int(base_gas + random.uniform(-20, 20)),
-                "light": int(base_light + random.uniform(-50, 50))
-            }
+            ser = serial.Serial(
+                port=port,
+                baudrate=baud,
+                bytesize=8,
+                parity='N',
+                stopbits=1,
+                timeout=2
+            )
 
-            latest_sensor_data.update(mock_data)
-            latest_sensor_data['timestamp'] = datetime.now().isoformat()
+            print(f"✅ Порт COM5 открыт успешно")
 
-            print(">>>", json.dumps(mock_data))
-            time.sleep(2)
+            ser.reset_input_buffer()
+            ser.reset_output_buffer()
+            # ser.write(b'AT\r\n')
 
-        except KeyboardInterrupt:
-            print("Stopped.")
-            break
+            print("⏳ Ожидание данных 5 секунд...")
+            received = []
+            start = time.time()
+
+            while time.time() - start < 5:
+                if ser.in_waiting > 0:
+                    try:
+                        data = ser.readline().decode('utf-8', errors='ignore').strip()
+                        if data:
+                            print(f"✅ Получено: {data}")
+                            received.append(data)
+                    except:
+                        data = ser.read(ser.in_waiting)
+                        print(f"✅ RAW: {data}")
+                        received.append(data)
+
+                time.sleep(0.1)
+
+            ser.close()
+
+            if received:
+                print(f"\n🎉 УСПЕХ! Скорость: {baud} бод")
+                print(f"📊 Получено сообщений: {len(received)}")
+
+                monitor_com5(port, baud)
+                return True
+            else:
+                print("❌ Нет данных")
+
+        except serial.SerialException as e:
+            print(f"❌ Ошибка Serial: {e}")
         except Exception as e:
-            print(f"Error: {e}")
-            time.sleep(1)
+            print(f"❌ Ошибка: {e}")
+
+    return False
 
 
-def get_latest_sensor_data():
-    return latest_sensor_data.copy()
+def monitor_com5(port, baud):
+    print(f"\n" + "=" * 60)
+    print(f"📊 МОНИТОРИНГ: COM5 @ {baud} бод")
+    print("=" * 60)
+    print("Нажмите Ctrl+C для выхода\n")
+
+    try:
+        ser = serial.Serial(port, baud, timeout=1)
+
+        while True:
+            if ser.in_waiting > 0:
+                try:
+                    data = ser.readline().decode('utf-8', errors='ignore').strip()
+                    if data:
+                        from datetime import datetime
+                        timestamp = datetime.now().strftime("%H:%M:%S")
+                        print(f"[{timestamp}] {data}")
+                except:
+                    data = ser.read(ser.in_waiting)
+                    from datetime import datetime
+                    timestamp = datetime.now().strftime("%H:%M:%S")
+                    print(f"[{timestamp}] RAW: {data}")
+
+            time.sleep(0.01)
+
+    except KeyboardInterrupt:
+        print("\n⏹ Остановлено пользователем")
+    except Exception as e:
+        print(f"Ошибка: {e}")
+    finally:
+        if 'ser' in locals():
+            ser.close()
+
+
+def check_pyserial():
+    print("\n🔧 Проверка pyserial...")
+    try:
+        import serial.tools.list_ports
+        ports = list(serial.tools.list_ports.comports())
+        print(f"✅ pyserial работает. Найдено портов: {len(ports)}")
+
+        for port in ports:
+            print(f"   {port.device} - {port.description}")
+
+        return True
+    except Exception as e:
+        print(f"❌ Ошибка pyserial: {e}")
+        return False
 
 
 if __name__ == "__main__":
-    read_sensor_data()
+
+    if not test_com5():
+        print("\n" + "=" * 60)
+        print("⚠️  STM32 НЕ ОБНАРУЖЕН")
+        print("=" * 60)
+
+    input("\nНажмите Enter для выхода...")
