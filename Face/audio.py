@@ -16,9 +16,6 @@ tts=pyttsx3.init()
 
 tts.setProperty("rate", 200)
 
-
-
-
 class VoiceProcessor:
     def __init__(self):
         self.commands = {
@@ -42,7 +39,7 @@ class VoiceProcessor:
         print(sr.Microphone.list_microphone_names())
 
         self.microphone = sr.Microphone(
-            device_index=1,      # у нас 4 на orangepi
+            device_index=6,
             sample_rate=48000,
             chunk_size=2048
         )
