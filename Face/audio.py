@@ -1,10 +1,9 @@
-import speech_recognition as sr
 import threading
 import time
-import requests
 import queue
+import requests
 import pyttsx3
-import openai
+import speech_recognition as sr
 import wikipedia
 from openai import OpenAI
 
@@ -12,11 +11,9 @@ client = OpenAI(api_key="-----")
 
 wikipedia.set_lang("ru")
 
-tts=pyttsx3.init()
-
+tts = pyttsx3.init()
 tts.setProperty("rate", 200)
-
-
+tts_lock = threading.Lock()
 
 
 class VoiceProcessor:
@@ -33,7 +30,7 @@ class VoiceProcessor:
             "избушка нейтрально": lambda: self.set_expression("neutral"),
             "избушка крути": self.start_casino,
             "избушка рычаг": self.pull_lever,
-            "избушка отмена": self.exit_casino
+            "избушка отмена": self.exit_casino,
         }
 
         self.recognizer = sr.Recognizer()
@@ -42,38 +39,59 @@ class VoiceProcessor:
         print(sr.Microphone.list_microphone_names())
 
         self.microphone = sr.Microphone(
-            device_index=1,      # у нас 4 на orangepi
+            device_index=1,
             sample_rate=48000,
-            chunk_size=2048
+            chunk_size=2048,
         )
 
-        self.command_queue = queue.Queue()
+        self.command_queue: "queue.Queue[callable]" = queue.Queue()
         self.setup_microphone()
 
-    def speak(self, text):
-        print("ассистент говрит: ", text)
-        tts.say(text)
-        tts.runAndWait()
-    def ask_gpt(self, prompt):
+    def speak(self, text: str):
+        print("ассистент говорит:", text)
         try:
+            with tts_lock:
+                tts.say(text)
+                tts.runAndWait()
+        except Exception as e:
+            print("TTS error:", e)
+
+    def ask_gpt(self, prompt: str) -> str:
+        try:
+            print("[GPT] отправляю запрос:", prompt)
             response = client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": "Отвечай кратко и понятно, по-русски."},
-                    {"role": "user", "content": prompt}
-                ]
+                    {"role": "user", "content": prompt},
+                ],
             )
-            return response["choices"][0]["message"]["content"]
+            answer = response.choices[0].message.content
+            print("[GPT] ответ получен")
+            return answer
         except Exception as e:
-            return f"Ошибка при обращении к ChatGPT: {e}"
+            print("GPT ERROR:", e)
+            return "Мне не удалось получить ответ от модели."
 
-    def search_wiki(self, query):
+    def search_wiki(self, query: str) -> str | None:
         try:
             return wikipedia.summary(query, sentences=2)
-        except:
+        except Exception as e:
+            print("[WIKI error]:", e)
             return None
 
-    def handle_assistant_request(self, text):
+    def handle_gpt_wake(self, text: str):
+        text = text.replace("дом", "").strip()
+
+        if text == "":
+            self.speak("Готов ответить. Скажи, что тебя интересует.")
+            return
+
+        print("[ASSISTANT] режим GPT по слову 'дом'")
+        answer = self.ask_gpt(text)
+        self.speak(answer)
+
+    def handle_assistant_request(self, text: str):
         text = text.replace("ассистент", "").strip()
 
         if text == "":
@@ -82,9 +100,11 @@ class VoiceProcessor:
 
         wiki = self.search_wiki(text)
         if wiki:
+            print("[ASSISTANT] ответ из Wikipedia")
             self.speak(wiki)
             return
 
+        print("[ASSISTANT] использую GPT")
         answer = self.ask_gpt(text)
         self.speak(answer)
 
@@ -96,21 +116,26 @@ class VoiceProcessor:
 
     def random_expression(self):
         from reaction import get_random_expression
+
         expression = get_random_expression()
         try:
-            requests.post("http://127.0.0.1:8000/change-expression",
-                          json={"expression": expression})
+            requests.post(
+                "http://127.0.0.1:8000/change-expression",
+                json={"expression": expression},
+            )
             print(f"Выражение изменено: {expression}")
         except Exception as e:
-            print(f"Ошибка: {e}")
+            print(f"Ошибка при смене выражения: {e}")
 
-    def set_expression(self, expression_name):
+    def set_expression(self, expression_name: str):
         try:
-            requests.post("http://127.0.0.1:8000/change-expression",
-                          json={"expression": expression_name})
+            requests.post(
+                "http://127.0.0.1:8000/change-expression",
+                json={"expression": expression_name},
+            )
             print(f"Выражение изменено: {expression_name}")
         except Exception as e:
-            print(f"Ошибка: {e}")
+            print(f"Ошибка при смене выражения: {e}")
 
     def start_casino(self):
         import webbrowser
@@ -121,35 +146,68 @@ class VoiceProcessor:
             requests.post("http://127.0.0.1:8000/casino/spin")
             print("Рычаг дернут")
         except Exception as e:
-            print(f"Ошибка: {e}")
+            print(f"Ошибка при запуске спина: {e}")
 
     def exit_casino(self):
         self.set_expression("neutral")
 
     def process_commands(self):
         while True:
-            command = self.command_queue.get()
-            if command is None:
+            task = self.command_queue.get()
+            if task is None:
                 break
-            command()
-            time.sleep(1)
+            try:
+                task()
+            except Exception as e:
+                print("Ошибка при выполнении задачи:", e)
+            time.sleep(0.3)
 
     def listen(self):
-        def callback(recognizer, audio):
+        def callback(recognizer: sr.Recognizer, audio: sr.AudioData):
             try:
                 text = recognizer.recognize_google(audio, language="ru-RU").lower()
                 print("Распознано:", text)
-                if "ассистент" in text:
-                    self.handle_assistant_request(text)
+
+                words = text.split()
+
+                if "дом" in words:
+                    threading.Thread(
+                        target=self.handle_gpt_wake,
+                        args=(text,),
+                        daemon=True,
+                    ).start()
                     return
+
+                if "ассистент" in words:
+                    threading.Thread(
+                        target=self.handle_assistant_request,
+                        args=(text,),
+                        daemon=True,
+                    ).start()
+                    return
+
                 for cmd, func in self.commands.items():
                     if cmd in text:
                         print("Выполняю команду:", cmd)
                         self.command_queue.put(func)
-            except Exception as e:
-                print("[ERROR speech]:", e)
+                        return
 
-        self.recognizer.listen_in_background(self.microphone, callback)
-        t = threading.Thread(target=self.process_commands)
-        t.daemon = True
-        t.start()
+            except sr.UnknownValueError:
+                return
+            except sr.RequestError as e:
+                print("[Speech API error]:", e)
+                return
+            except Exception as e:
+                print("[Unexpected speech error]:", e)
+                return
+
+        print("Запускаю фоновое прослушивание")
+        self.recognizer.listen_in_background(
+            self.microphone,
+            callback,
+            phrase_time_limit=5,
+        )
+
+        worker = threading.Thread(target=self.process_commands)
+        worker.daemon = True
+        worker.start()
