@@ -16,6 +16,20 @@ tts_lock = threading.Lock()
 
 
 class VoiceProcessor:
+    TOMORROW_WORDS = {
+        "завтра",
+        "завтро",
+        "завтрашняя",
+        "завтрашнюю",
+        "завтрашней"
+    }
+
+    WEATHER_WORDS = {
+        "погода",
+        "погод",
+        "пагода",
+        "пог"
+    }
 
     DOM_WORDS = {
         "дом",
@@ -207,6 +221,72 @@ class VoiceProcessor:
                 print("Ошибка при выполнении задачи:", e)
             time.sleep(0.3)
 
+    def handle_weather_request(self, day_index: int):
+        try:
+            url = "https://api.open-meteo.com/v1/forecast"
+            params = {
+                "latitude": 55.0084,  # Новосибирск
+                "longitude": 82.9357,
+                "daily": "temperature_2m_max,temperature_2m_min,weathercode",
+                "timezone": "Asia/Novosibirsk"
+            }
+
+            r = requests.get(url, params=params, timeout=5)
+            data = r.json()
+
+            temp_max = round(data["daily"]["temperature_2m_max"][day_index])
+            temp_min = round(data["daily"]["temperature_2m_min"][day_index])
+            code = data["daily"]["weathercode"][day_index]
+
+            desc = self.decode_weather_code(code)
+
+            if day_index == 0:
+                text = (
+                    f"Сегодня в Новосибирске {desc}. "
+                    f"Температура от {temp_min} до {temp_max} градусов."
+                )
+            elif day_index == 1:
+                text = (
+                    f"Завтра в Новосибирске {desc}. "
+                    f"Температура от {temp_min} до {temp_max} градусов."
+                )
+            else:
+                text = (
+                    f"Послезавтра в Новосибирске {desc}. "
+                    f"Температура от {temp_min} до {temp_max} градусов."
+                )
+
+            self.speak(text)
+
+        except Exception as e:
+            print("[WEATHER error]:", e)
+            self.speak("Не удалось получить погоду.")
+
+
+    def decode_weather_code(self, code: int) -> str:
+        mapping = {
+            0: "ясно",
+            1: "в основном ясно",
+            2: "переменная облачность",
+            3: "пасмурно",
+            45: "туман",
+            48: "изморозь",
+            51: "лёгкая морось",
+            53: "морось",
+            55: "сильная морось",
+            61: "небольшой дождь",
+            63: "дождь",
+            65: "сильный дождь",
+            71: "небольшой снег",
+            73: "снег",
+            75: "сильный снег",
+            80: "ливень",
+            81: "сильный ливень",
+            82: "очень сильный ливень",
+            95: "гроза"
+        }
+        return mapping.get(code, "неизвестная погода")
+
     def activate_dialog(self, seconds=10):
         self.dialog_active = True
         self.dialog_until = time.time() + seconds
@@ -220,6 +300,18 @@ class VoiceProcessor:
             return False
 
         return True
+
+    def remove_wake_words(self, text: str) -> str:
+        words = text.split()
+
+        filtered = [
+            w for w in words
+            if w not in self.DOM_WORDS
+               and w not in self.ASSISTANT_WORDS
+               and w not in self.WEATHER_WORDS
+        ]
+
+        return " ".join(filtered).strip()
 
     def listen(self):
         def callback(recognizer: sr.Recognizer, audio: sr.AudioData):
@@ -250,14 +342,22 @@ class VoiceProcessor:
                     else:
                         self.speak("Я слушаю")
                     return
+                if self.WEATHER_WORDS & words:
+                    if self.TOMORROW_WORDS & words:
+                        threading.Thread(
+                            target=self.handle_weather_request,
+                            args=(1,),
+                            daemon=True
+                        ).start()
+                    else:
+                        threading.Thread(
+                            target=self.handle_weather_request,
+                            args=(0,),
+                            daemon=True
+                        ).start()
 
-                # if self.DOM_WORDS & words:
-                #     threading.Thread(
-                #         target=self.handle_gpt_wake,
-                #         args=(text,),
-                #         daemon=True,
-                #     ).start()
-                #     return
+                        return
+
 
                 if self.ASSISTANT_WORDS & words:
                     threading.Thread(
