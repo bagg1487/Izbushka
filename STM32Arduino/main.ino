@@ -1,96 +1,60 @@
 #include "config.h"
 #include "gyro.h"
 #include "ultrasonic.h"
-#include "joystick.h"
 #include "servoControl.h"
+#include "joystick.h"
 
 void setup() {
-  Serial.begin(9600);
-  delay(1000);
-  
-  Serial.println("=== Система управления ===");
-  
-  setupUltrasonic();
-  setupMPU6050();
-  setupJoystick();
-  setupServoMotor();
-  
-  Serial.println("Система готова");
+    Serial.begin(115200);
+    while(!Serial);
+    delay(1000);
+    
+    Serial.println("=== STM32F4 Robot Shield ===");
+    
+    setupUltrasonic();
+    setupMPU6050();
+    setupServoControl();
+    
+    Serial.println("System ready");
 }
 
 void loop() {
-  static int counter = 0;
-  
-  digitalWrite(LED_PIN, HIGH);
-  
-  float distance = measureDistance();
-  readMPU6050();
-  
-  bool joyConnected = checkJoystick();
-  if (joyConnected) {
-    processJoystick();
-  }
-  
-  digitalWrite(LED_PIN, LOW);
-  
-  counter++;
-  
-  Serial.print("№");
-  Serial.print(counter);
-  Serial.print(" | Dist: ");
-  
-  if (distance > 0) {
-    Serial.print(distance, 1);
-    Serial.print("cm");
-  } else {
-    Serial.print("---");
-  }
-  
-  Serial.print(" | MPU: ");
-  
-  if (mpuConnected) {
-    float gx = gyroX / 131.0;
-    float gy = gyroY / 131.0;
-    float gz = gyroZ / 131.0;
+    static unsigned long lastSensorRead = 0;
+    static unsigned long lastUpdate = 0;
     
-    float ax = accX / 16384.0;
-    float ay = accY / 16384.0;
-    float az = accZ / 16384.0;
+    unsigned long now = millis();
     
-    Serial.print("G(");
-    Serial.print(gx, 1);
-    Serial.print(",");
-    Serial.print(gy, 1);
-    Serial.print(",");
-    Serial.print(gz, 1);
-    Serial.print(") A(");
-    Serial.print(ax, 2);
-    Serial.print(",");
-    Serial.print(ay, 2);
-    Serial.print(",");
-    Serial.print(az, 2);
-    Serial.print(")");
-  } else {
-    Serial.print("NO MPU");
-  }
-  
-  if (joyConnected) {
-    Serial.print(" | Joy: ");
-    Serial.print("X:");
-    Serial.print(joystickX);
-    Serial.print(" Y:");
-    Serial.print(joystickY);
-    
-    if (joystickConnected) {
-      updateFromJoystick();
+    if(now - lastSensorRead >= 100) {
+        lastSensorRead = now;
+        
+        float distance = measureDistance();
+        readMPU6050();
+        
+        Serial.print("Distance: ");
+        Serial.print(distance);
+        Serial.print(" cm | MPU: ");
+        if(mpuConnected) {
+            Serial.print(accX);
+            Serial.print(",");
+            Serial.print(accY);
+            Serial.print(",");
+            Serial.print(accZ);
+        } else {
+            Serial.print("NO MPU");
+        }
+        Serial.print(" | State: ");
+        Serial.print(state);
+        Serial.print(" | Left C: ");
+        Serial.print(leftLeg.currentAngle.C);
+        Serial.print(" | Right C: ");
+        Serial.print(rightLeg.currentAngle.C);
+        Serial.println();
     }
-  } else {
-    Serial.print(" | NO JOY");
-  }
-  
-  Serial.println();
-  
-  updateServoMotor();
-  
-  delay(LOOP_DELAY);
+    
+    if(now - lastUpdate >= 20) {
+        lastUpdate = now;
+        updateServoControl();
+    }
+    
+    delay(10);
 }

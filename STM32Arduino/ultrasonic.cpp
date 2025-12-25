@@ -1,4 +1,5 @@
 #include "ultrasonic.h"
+#include <Arduino.h>
 
 void setupUltrasonic() {
   pinMode(TRIG_PIN, OUTPUT);

@@ -1,7 +1,7 @@
 #ifndef MPU6050_H
 #define MPU6050_H
 
-#include <Wire.h>
+#include <Arduino.h>
 #include "config.h"
 
 extern int16_t accX, accY, accZ;
