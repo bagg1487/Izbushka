@@ -2,8 +2,8 @@
 #define SERVO_CONTROL_H
 
 #include <Arduino.h>
-#include <stdint.h>
 #include <Adafruit_PWMServoDriver.h>
+#include "motorControl.h"
 
 typedef struct {
     int A, B, C, D, E;
@@ -14,19 +14,6 @@ typedef struct {
     ServosAngle currentAngle;
     ServosAngle calibrationAngle;
 } Leg;
-
-typedef struct {
-    uint8_t in1_pin;
-    uint8_t in2_pin;
-    uint8_t en_pin;
-    int current_speed;
-    int current_direction;
-} Motor;
-
-extern Motor motor1;
-extern Motor motor2;
-extern Motor motor_hand1;
-extern Motor motor_hand2;
 
 extern Leg leftLeg;
 extern Leg rightLeg;
@@ -48,18 +35,35 @@ extern Adafruit_PWMServoDriver pca9685_leg;
 extern Adafruit_PWMServoDriver pca9685_hand;
 
 extern int calibrationAngles[20];
+extern uint32_t timerLeft;
+extern uint32_t timerRight;
+extern int dirLeft;
+extern int dirRight;
+extern const uint32_t GRIPPER_INTERVAL;
 
 void setupServoControl();
 void updateServoControl();
-void L298N_move(Motor motor, int dir, int speed);
-void L298N_move_without_PWM(Motor motor, int dir);
-ServosAngle setAngle(int A, int B, int C, int D, int E);
-void setServoAngle(char leg, char servo, int angle);
-int getMaxAngle(ServosAngle current, ServosAngle target);
-ServosAngle getNextStepAll(ServosAngle start, ServosAngle target, int maxAngle, int step);
-void allServoLegSpin(Adafruit_PWMServoDriver &pwm, int speedDelay, ServosAngle left, ServosAngle right, int correctAngle);
-void allServoHandSpin(Adafruit_PWMServoDriver &pwm, int speedDelay, ServosAngle left, ServosAngle right, int correctAngle);
-void PCA9685_SetServoAngle(Adafruit_PWMServoDriver &pwm, uint8_t channel, int angle);
+
+void PCA9685_SetServoAngle(Adafruit_PWMServoDriver &pwm, uint8_t channel, float angle);
 void PCA9685_ResetAllChannels(Adafruit_PWMServoDriver &pwm);
+void setTrackTilt(Adafruit_PWMServoDriver &pwm, int offset);
+
+void allServoLegSpin(
+    Adafruit_PWMServoDriver &pwm,
+    int speedDelay,
+    ServosAngle left,
+    ServosAngle right,
+    int correctAngle
+);
+
+void allServoHandSpin(
+    Adafruit_PWMServoDriver &pwm,
+    int speedDelay,
+    ServosAngle left,
+    ServosAngle right,
+    int correctAngle
+);
+
+ServosAngle setAngle(int A, int B, int C, int D, int E);
 
 #endif

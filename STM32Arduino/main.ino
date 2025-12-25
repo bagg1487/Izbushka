@@ -3,6 +3,7 @@
 #include "ultrasonic.h"
 #include "servoControl.h"
 #include "joystick.h"
+#include "motorControl.h"
 
 void setup() {
     Serial.begin(115200);
@@ -14,17 +15,17 @@ void setup() {
     setupUltrasonic();
     setupMPU6050();
     setupServoControl();
+    setupMotorControl();
     
     Serial.println("System ready");
 }
 
 void loop() {
     static unsigned long lastSensorRead = 0;
-    static unsigned long lastUpdate = 0;
     
     unsigned long now = millis();
     
-    if(now - lastSensorRead >= 100) {
+    if(now - lastSensorRead >= 1000) {
         lastSensorRead = now;
         
         float distance = measureDistance();
@@ -32,29 +33,12 @@ void loop() {
         
         Serial.print("Distance: ");
         Serial.print(distance);
-        Serial.print(" cm | MPU: ");
-        if(mpuConnected) {
-            Serial.print(accX);
-            Serial.print(",");
-            Serial.print(accY);
-            Serial.print(",");
-            Serial.print(accZ);
-        } else {
-            Serial.print("NO MPU");
-        }
-        Serial.print(" | State: ");
-        Serial.print(state);
-        Serial.print(" | Left C: ");
-        Serial.print(leftLeg.currentAngle.C);
-        Serial.print(" | Right C: ");
-        Serial.print(rightLeg.currentAngle.C);
+        Serial.print(" cm");
         Serial.println();
     }
     
-    if(now - lastUpdate >= 20) {
-        lastUpdate = now;
-        updateServoControl();
-    }
+    updateServoControl();
     
-    delay(10);
+    state = 1;
+    
 }
