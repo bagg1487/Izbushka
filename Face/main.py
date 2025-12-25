@@ -162,9 +162,8 @@ async def text_command(data: TextCommand):
 
 def start_voice_processor():
     from audio import VoiceProcessor
-    voice_processor = VoiceProcessor()
-    voice_processor.listen()  # запускает слушание микрофона
-
+    vp = VoiceProcessor()
+    vp.listen()
 
 if __name__ == "__main__":
     voice_thread = threading.Thread(target=start_voice_processor)
