@@ -7,8 +7,7 @@ import speech_recognition as sr
 import wikipedia
 from openai import OpenAI
 
-client = OpenAI(api_key="-----")
-
+client = OpenAI(api_key="")
 wikipedia.set_lang("ru")
 
 tts = pyttsx3.init()
@@ -17,6 +16,33 @@ tts_lock = threading.Lock()
 
 
 class VoiceProcessor:
+
+    DOM_WORDS = {
+        "дом",
+        "дам",
+        "том",
+        "дон",
+        "домой",
+        "дома",
+        "домик",
+        "дном",
+        "док",
+        "домъ"
+    }
+
+    ASSISTANT_WORDS = {
+        "ассистент",
+        "асистент",
+        "ассистэнт",
+        "асистэнт",
+        "ассист",
+        "ассик",
+        "ассис",
+        "ассет",
+        "ассистен",
+        "асист"
+    }
+
     def __init__(self):
         self.commands = {
             "избушка реакция": self.random_expression,
@@ -33,7 +59,21 @@ class VoiceProcessor:
             "избушка отмена": self.exit_casino,
         }
 
+
+        self.system_prompt = {
+            "role": "system",
+            "content": (
+                "Ты голосовой ассистент «Избушка». "
+                "Отвечай кратко, по-русски, без лишних объяснений."
+            )
+        }
+
+        self.dialog_history=[self.system_prompt]
+
         self.recognizer = sr.Recognizer()
+
+        self.dialog_active = False
+        self.dialog_until = 0.0
 
         print("Список доступных микрофонов:")
         print(sr.Microphone.list_microphone_names())
@@ -56,17 +96,22 @@ class VoiceProcessor:
         except Exception as e:
             print("TTS error:", e)
 
+    def trim_dialog_history(self, max_mess=5):
+        self.dialog_history = ([self.system_prompt] + self.dialog_history[1:][-max_mess:])
+
     def ask_gpt(self, prompt: str) -> str:
         try:
             print("[GPT] отправляю запрос:", prompt)
+            self.dialog_history.append({"role": "user", "content": prompt})
             response = client.chat.completions.create(
                 model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": "Отвечай кратко и понятно, по-русски."},
-                    {"role": "user", "content": prompt},
-                ],
+                messages=self.dialog_history
             )
             answer = response.choices[0].message.content
+
+            self.dialog_history.append({"role": "assistant", "content": answer})
+            self.trim_dialog_history()
+
             print("[GPT] ответ получен")
             return answer
         except Exception as e:
@@ -162,23 +207,59 @@ class VoiceProcessor:
                 print("Ошибка при выполнении задачи:", e)
             time.sleep(0.3)
 
+    def activate_dialog(self, seconds=10):
+        self.dialog_active = True
+        self.dialog_until = time.time() + seconds
+
+    def is_dialog_active(self):
+        if not self.dialog_active:
+            return False
+
+        if time.time() > self.dialog_until:
+            self.dialog_active = False
+            return False
+
+        return True
+
     def listen(self):
         def callback(recognizer: sr.Recognizer, audio: sr.AudioData):
             try:
                 text = recognizer.recognize_google(audio, language="ru-RU").lower()
                 print("Распознано:", text)
 
-                words = text.split()
+                words = set(text.split())
 
-                if "дом" in words:
+                if self.is_dialog_active():
+                    self.activate_dialog(10)
                     threading.Thread(
                         target=self.handle_gpt_wake,
                         args=(text,),
-                        daemon=True,
+                        daemon=True
                     ).start()
                     return
 
-                if "ассистент" in words:
+                if self.DOM_WORDS & words:
+                    self.activate_dialog(10)
+                    clean_text = self.remove_wake_words(text)
+                    if clean_text:
+                        threading.Thread(
+                            target=self.handle_gpt_wake,
+                            args=(clean_text,),
+                            daemon=True
+                        ).start()
+                    else:
+                        self.speak("Я слушаю")
+                    return
+
+                # if self.DOM_WORDS & words:
+                #     threading.Thread(
+                #         target=self.handle_gpt_wake,
+                #         args=(text,),
+                #         daemon=True,
+                #     ).start()
+                #     return
+
+                if self.ASSISTANT_WORDS & words:
                     threading.Thread(
                         target=self.handle_assistant_request,
                         args=(text,),
