@@ -57,3 +57,4 @@ izbushka_project_8_1\main.o: C:\Keil\ARM\ARMCC\bin\..\include\stdlib.h
 izbushka_project_8_1\main.o: C:\Keil\ARM\ARMCC\bin\..\include\stdio.h
 izbushka_project_8_1\main.o: C:\Keil\ARM\ARMCC\bin\..\include\string.h
 izbushka_project_8_1\main.o: ..\Core\Inc\DHT.h
+izbushka_project_8_1\main.o: ..\Core\Inc\L298NDriver.h

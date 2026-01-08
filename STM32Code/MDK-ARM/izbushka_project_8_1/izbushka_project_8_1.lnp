@@ -10,6 +10,7 @@
 "izbushka_project_8_1\mpu6050.o"
 "izbushka_project_8_1\pca9685.o"
 "izbushka_project_8_1\servo.o"
+"izbushka_project_8_1\l298ndriver.o"
 "izbushka_project_8_1\stm32f4xx_hal_adc.o"
 "izbushka_project_8_1\stm32f4xx_hal_adc_ex.o"
 "izbushka_project_8_1\stm32f4xx_ll_adc.o"
