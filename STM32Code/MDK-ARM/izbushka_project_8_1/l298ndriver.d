@@ -1,4 +1,4 @@
-izbushka_project_8_1\l298ndriver.o: ..\Core\Src\L298NDriver.c
+izbushka_project_8_1\l298ndriver.o: L298NDriver.c
 izbushka_project_8_1\l298ndriver.o: ..\Core\Inc\main.h
 izbushka_project_8_1\l298ndriver.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h
 izbushka_project_8_1\l298ndriver.o: ..\Core\Inc\stm32f4xx_hal_conf.h
