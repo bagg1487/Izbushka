@@ -1276,52 +1276,104 @@ int main(void)
   MX_ADC1_Init();
   MX_I2C3_Init();
   MX_TIM1_Init();
-  /* USER CODE BEGIN 2 */
+
+/* USER CODE BEGIN 2 */
 uint8_t msg[100];
 
-sprintf((char*)msg, "\r\n=== ????? ???? ????? ?? ?????? ===\r\n");
+sprintf((char*)msg, "\r\n=== ТЕСТ МОТОРОВ: ПООЧЕРЕДНО 2 РАЗА, ЗАТЕМ ВМЕСТЕ ===\r\n");
 HAL_UART_Transmit(&huart1, msg, strlen((char*)msg), 100);
 
-// ????????? ???
-HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2); // PE11 - Motor1
-HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3); // PE13 - Motor2
+// Включаем ШИМ для обоих каналов
+HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2); // Motor1 - PE11
+HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3); // Motor2 - PE13
 
-sprintf((char*)msg, "??? ???????\r\n");
+// ==================== 1. ПООЧЕРЕДНО ПО 2 РАЗА ====================
+sprintf((char*)msg, "\r\n--- ПООЧЕРЕДНО ПО 2 РАЗА ---\r\n");
 HAL_UART_Transmit(&huart1, msg, strlen((char*)msg), 100);
 
-// 1. ???? ?????? 1 (PE11)
-sprintf((char*)msg, "\r\n=== ????? 1 (PE11) ===\r\n");
-HAL_UART_Transmit(&huart1, msg, strlen((char*)msg), 100);
+for (int i = 0; i < 2; i++) {
+    // Motor1: вперед (PG1=1, PE7=0)
+    sprintf((char*)msg, "Мотор1 #%d: ВПЕРЕД\r\n", i+1);
+    HAL_UART_Transmit(&huart1, msg, strlen((char*)msg), 100);
+    
+    HAL_GPIO_WritePin(GPIOG, GPIO_PIN_1, GPIO_PIN_SET);   
+    HAL_GPIO_WritePin(GPIOE, GPIO_PIN_7, GPIO_PIN_RESET);
+    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 350); // 70% мощности
+    HAL_Delay(2000);
+    
+    // Motor1: стоп
+    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 0);
+    HAL_GPIO_WritePin(GPIOG, GPIO_PIN_1, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(GPIOE, GPIO_PIN_7, GPIO_PIN_RESET);
+    HAL_Delay(500);
+    
+    // Motor2: вперед (PF13=1, PF14=0)
+    sprintf((char*)msg, "Мотор2 #%d: ВПЕРЕД\r\n", i+1);
+    HAL_UART_Transmit(&huart1, msg, strlen((char*)msg), 100);
+    
+    HAL_GPIO_WritePin(GPIOF, GPIO_PIN_13, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(GPIOF, GPIO_PIN_14, GPIO_PIN_RESET);
+    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, 350); // 70% мощности
+    HAL_Delay(2000);
+    
+    // Motor2: стоп
+    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, 0);
+    HAL_GPIO_WritePin(GPIOF, GPIO_PIN_13, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(GPIOF, GPIO_PIN_14, GPIO_PIN_RESET);
+    HAL_Delay(500);
+}
 
-//  Motor1
+// ==================== 2. ОДИН РАЗ ОДНОВРЕМЕННО ====================
+sprintf((char*)msg, "\r\n--- ОБА МОТОРА ОДНОВРЕМЕННО ---\r\n");
+HAL_UART_Transmit(&huart1, msg, strlen((char*)msg), 400);
+
+// ОБА мотора: вперед
+sprintf((char*)msg, "Оба мотора: ВПЕРЕД (50%% мощности)\r\n");
+HAL_UART_Transmit(&huart1, msg, strlen((char*)msg), 400);
+
+// Motor1: вперед
 HAL_GPIO_WritePin(GPIOG, GPIO_PIN_1, GPIO_PIN_SET);   
-HAL_GPIO_WritePin(GPIOE, GPIO_PIN_7, GPIO_PIN_RESET); 
-
-__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 400);
-HAL_UART_Transmit(&huart1, msg, strlen((char*)msg), 100);
-HAL_Delay(3000);
-
-__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 0);
-HAL_GPIO_WritePin(GPIOG, GPIO_PIN_1, GPIO_PIN_RESET);
 HAL_GPIO_WritePin(GPIOE, GPIO_PIN_7, GPIO_PIN_RESET);
-HAL_Delay(1000);
 
-
-HAL_UART_Transmit(&huart1, msg, strlen((char*)msg), 100);
-
-// Motor2
+// Motor2: вперед  
 HAL_GPIO_WritePin(GPIOF, GPIO_PIN_13, GPIO_PIN_SET);
 HAL_GPIO_WritePin(GPIOF, GPIO_PIN_14, GPIO_PIN_RESET);
 
-__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, 400);
-HAL_UART_Transmit(&huart1, msg, strlen((char*)msg), 100);
-HAL_Delay(3000);
+// Устанавливаем ШИМ для обоих моторов
+__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 400); // 50% мощности
+__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, 400); // 50% мощности
 
+HAL_Delay(2000);
+
+// Motor1: назад
+HAL_GPIO_WritePin(GPIOG, GPIO_PIN_1, GPIO_PIN_RESET);   
+HAL_GPIO_WritePin(GPIOE, GPIO_PIN_7, GPIO_PIN_SET);
+
+// Motor2: назад 
+HAL_GPIO_WritePin(GPIOF, GPIO_PIN_13, GPIO_PIN_RESET);
+HAL_GPIO_WritePin(GPIOF, GPIO_PIN_14, GPIO_PIN_SET);
+
+// Устанавливаем ШИМ для обоих моторов
+__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 400); // 50% мощности
+__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, 400); // 50% мощности
+
+HAL_Delay(2000);
+
+// ОБА мотора: стоп
+sprintf((char*)msg, "Оба мотора: СТОП\r\n");
+HAL_UART_Transmit(&huart1, msg, strlen((char*)msg), 100);
+
+__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 0);
 __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, 0);
+
+HAL_GPIO_WritePin(GPIOG, GPIO_PIN_1, GPIO_PIN_RESET);
+HAL_GPIO_WritePin(GPIOE, GPIO_PIN_7, GPIO_PIN_RESET);
 HAL_GPIO_WritePin(GPIOF, GPIO_PIN_13, GPIO_PIN_RESET);
 HAL_GPIO_WritePin(GPIOF, GPIO_PIN_14, GPIO_PIN_RESET);
+
+sprintf((char*)msg, "\r\n=== ТЕСТ ЗАВЕРШЕН ===\r\n");
 HAL_UART_Transmit(&huart1, msg, strlen((char*)msg), 100);
-  /* USER CODE END 2 */
+/* USER CODE END 2 */
 
   /* Init scheduler */
   osKernelInitialize();
@@ -1623,7 +1675,7 @@ static void MX_TIM1_Init(void)
   htim1.Instance = TIM1;
   htim1.Init.Prescaler = 127;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim1.Init.Period = 625;
+  htim1.Init.Period = 500;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim1.Init.RepetitionCounter = 0;
   htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
@@ -2785,88 +2837,85 @@ void StartMotorControlTask(void *argument)
 
 	/* Infinite loop */
 	for(;;)
-	{
-			switch(state) {
-					case 1:
-							// Move forward
-							if(turnLeft == 0 && turnRight == 0) {
-									L298N_move(motor1, 1, 700);
-									L298N_move(motor2, 1, 700);
-							} else
-							// Move backward
-							if(turnLeft == 1 && turnRight == 0) {
-									L298N_move(motor1, -1, 600);
-									L298N_move(motor2, 1, 700);
-							} else
-							// Turn right
-							if(turnLeft == 0 && turnRight == 1) {
-									L298N_move(motor1, 1, 700);
-									L298N_move(motor2, -1, 600);
-							} else
-							// Turn left
-							if(turnLeft == 1 && turnRight == 1) {
-									L298N_move(motor1, -1, 700);
-									L298N_move(motor2, -1, 700);
-							}
-							break;
-					case 4:
-							// Animation 1 after 3 minutes of idle
-							if (hold3mod == 1) {
-									if(turnLeft == 1 && turnRight == 0) {
-											L298N_move(motor1, -1, 400);
-											L298N_move(motor2, 1, 400);
-									} else if(turnLeft == 0 && turnRight == 1) {
-											L298N_move(motor1, 1, 400);
-											L298N_move(motor2, -1, 400);
-									}
-							}
-							break;
-					case 2:
-							/*if (hold3mod == 1){
-									L298N_move(motor1, -1, 700);
-									L298N_move(motor2, 1, 700);
-									osDelay(1000);
-									L298N_move(motor1, 1, 0);
-									L298N_move(motor2, 1, 0);
-									osDelay(1000);
-									L298N_move(motor1, -1, 700);
-									L298N_move(motor2, 1, 700);
-									osDelay(1000);
-									L298N_move(motor1, 1, 0);
-									L298N_move(motor2, 1, 0);
-									osDelay(1000);
-							}*/
-							break;
-					case 12:
-						osDelay(4000);
-						L298N_move(motor1, -1, 500);
-						L298N_move(motor2, 1, 500);
-						osDelay(1000);
-						L298N_move(motor1, 1, 0);
-						L298N_move(motor2, 0, 0);
-						osDelay(100);
-						L298N_move(motor1, -1, 500);
-						L298N_move(motor2, 1, 500);
-						osDelay(1000);
-						L298N_move(motor1, 1, 0);
-						L298N_move(motor2, 0, 0);
-						osDelay(100);
-						L298N_move(motor1, 1, 300);
-						L298N_move(motor2, 1, 300);
-						osDelay(2000);
-						L298N_move(motor1, -1, 300);
-						L298N_move(motor2, -1, 300);
-						osDelay(2000);
-						L298N_move(motor1, -1, 0);
-						L298N_move(motor2, -1, 0);
-						osDelay(10000);
-						break;
-					case 6:
-							// Stop movement
-							L298N_move(motor1, 1, 0);
-							L298N_move(motor2, 1, 0);
-							break;
-			}
+    {
+        switch(state) {
+            case 1:
+                // ВПЕРЕД - обе гусеницы вперед
+                if(turnLeft == 1 && turnRight == 1) {
+                    L298N_move(motor1, -1, 400);
+                    L298N_move(motor2, -1, 400);
+                } 
+                // НАЗАД - обе гусеницы назад  
+                else if(turnLeft == 0 && turnRight == 0) {
+                    L298N_move(motor1, 1, 400);
+                    L298N_move(motor2, 1, 400);
+                }
+                // ПОВОРОТ ВЛЕВО - правая вперед, левая назад
+                else if(turnLeft == 1 && turnRight == 0) {
+                    L298N_move(motor1, 1, 350);
+                    L298N_move(motor2, -1, 400);
+                }
+                // ПОВОРОТ ВПРАВО - левая вперед, правая назад
+                else if(turnLeft == 0 && turnRight == 1) {
+                    L298N_move(motor1, -1, 400);
+                    L298N_move(motor2, 1, 350);
+                }
+                break;
+
+            case 4:
+                if (hold3mod == 1) {
+                    // Вращение на месте влево
+                    if(turnLeft == 1 && turnRight == 0) {
+                        L298N_move(motor1, 1, 400);
+                        L298N_move(motor2, -1, 400);
+                    } 
+                    // Вращение на месте вправо
+                    else if(turnLeft == 0 && turnRight == 1) {
+                        L298N_move(motor1, -1, 400);
+                        L298N_move(motor2, 1, 400);
+                    }
+                }
+                break;
+
+            case 12:
+                osDelay(4000);
+                // Вращение влево
+                L298N_move(motor1, 1, 500);    // Левая назад
+                L298N_move(motor2, -1, 500);   // Правая вперед
+                osDelay(1000);
+                L298N_move(motor1, -1, 0);
+                L298N_move(motor2, 0, 0);
+                osDelay(100);
+                
+                // Вращение влево еще раз
+                L298N_move(motor1, 1, 500);
+                L298N_move(motor2, -1, 500);
+                osDelay(1000);
+                L298N_move(motor1, -1, 0);
+                L298N_move(motor2, 0, 0);
+                osDelay(100);
+                
+                // Вперед
+                L298N_move(motor1, -1, 300);
+                L298N_move(motor2, -1, 300);
+                osDelay(2000);
+                
+                // Назад
+                L298N_move(motor1, 1, 300);
+                L298N_move(motor2, 1, 300);
+                osDelay(2000);
+                
+                L298N_move(motor1, 1, 0);
+                L298N_move(motor2, 1, 0);
+                osDelay(10000);
+                break;
+
+            case 6:
+                // Стоп
+                L298N_move(motor1, 0, 0);
+                L298N_move(motor2, 0, 0);
+                break;
+        }
 
 			// Opening/closing manipulator on the left hand
 			if(clenchLeft == 1) {
