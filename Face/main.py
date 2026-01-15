@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import json
+import time
 import uvicorn
 import threading
 
@@ -52,7 +53,7 @@ async def diagnostics_websocket(websocket: WebSocket):
             # Генерируем тестовые данные датчиков
             import random
             from datetime import datetime
-            
+
             sensor_data = {
                 "timestamp": datetime.now().isoformat(),
                 "distance": max(0, 50 + random.uniform(-10, 10)),
@@ -60,13 +61,13 @@ async def diagnostics_websocket(websocket: WebSocket):
                 "gyro_y": random.uniform(-30, 30),
                 "gyro_z": random.uniform(-10, 10)
             }
-            
+
             await websocket.send_text(json.dumps({
                 "type": "sensor_data",
                 "data": sensor_data
             }))
             await asyncio.sleep(1)  # Обновление каждую секунду
-            
+
     except Exception as e:
         print(f"WebSocket error: {e}")
 
@@ -124,10 +125,10 @@ async def casino_spin():
 async def text_command(data: TextCommand):
     global current_expression
     command = data.command.lower()
-    
+
     expressions = {
         "реакция": "random",
-        "радость": "happy", 
+        "радость": "happy",
         "злость": "angry",
         "удивление": "surprised",
         "грусть": "sad",
@@ -136,38 +137,39 @@ async def text_command(data: TextCommand):
         "сон": "sleepy",
         "нейтрально": "neutral"
     }
-    
+
     if command in expressions:
         if command == "реакция":
             expression = get_random_expression()
         else:
             expression = expressions[command]
-        
+
         current_expression = expression
         await manager.broadcast(json.dumps({
-            "type": "face_expression", 
+            "type": "face_expression",
             "expression": current_expression
         }))
         return {"status": "success", "expression": expression}
-    
+
     elif command == "крути":
         await manager.broadcast(json.dumps({"type": "casino_spin"}))
         return {"status": "success", "action": "casino_spin"}
-    
+
     elif command == "диагностика":
         webbrowser.open("http://127.0.0.1:8000/diagnostics")
         return {"status": "success", "action": "open_diagnostics"}
-    
+
     return {"status": "error", "message": "Неизвестная команда"}
 
 def start_voice_processor():
     from audio import VoiceProcessor
     vp = VoiceProcessor()
     vp.listen()
+    while True:
+        time.sleep(1)
+
 
 if __name__ == "__main__":
     voice_thread = threading.Thread(target=start_voice_processor)
-    voice_thread.daemon = True
     voice_thread.start()
-
     uvicorn.run(app, host="127.0.0.1", port=8000)
