@@ -10,9 +10,9 @@ from openai import OpenAI
 client = OpenAI(api_key="")
 wikipedia.set_lang("ru")
 
-tts = pyttsx3.init()
-tts.setProperty("rate", 200)
-tts_lock = threading.Lock()
+# tts = pyttsx3.init()
+# tts.setProperty("rate", 200)
+# tts_lock = threading.Lock()
 
 
 class VoiceProcessor:
@@ -86,6 +86,9 @@ class VoiceProcessor:
 
         self.recognizer = sr.Recognizer()
 
+        self._stop_listening = None
+
+
         self.dialog_active = False
         self.dialog_until = 0.0
 
@@ -98,20 +101,51 @@ class VoiceProcessor:
             chunk_size=2048,
         )
 
-        self.command_queue: "queue.Queue[callable]" = queue.Queue()
+        self.command_queue: "queue.Queue[callable]" = queue.Queue() #очередь для функций
         self.setup_microphone()
+
+        self.tts_queue: "queue.Queue[str]" = queue.Queue() #очередь для произношения
+        self._tts_running = True
+        self._tts_lock = threading.Lock()
+
+        self._speaking = False
+        self._mute_until = 0.0
+
+
+        self._tts_thread = threading.Thread(target=self._tts_worker, daemon=True)
+        self._tts_thread.start()
+
+
 
     def speak(self, text: str):
         print("ассистент говорит:", text)
-        try:
-            with tts_lock:
-                tts.say(text)
-                tts.runAndWait()
-        except Exception as e:
-            print("TTS error:", e)
+        self.tts_queue.put(text)
 
     def trim_dialog_history(self, max_mess=5):
         self.dialog_history = ([self.system_prompt] + self.dialog_history[1:][-max_mess:])
+
+    def _tts_worker(self):
+        engine = pyttsx3.init()
+        engine.setProperty("rate", 200)
+
+        while self._tts_running:
+            text = self.tts_queue.get()
+            if text is None:
+                break
+
+            try:
+                with self._tts_lock:
+                    self._speaking = True
+                    self._mute_until = time.time() + 0.4
+
+                    engine.stop()
+                    engine.say(text)
+                    engine.runAndWait()
+
+            except Exception as e:
+                print("TTS error:", e)
+            finally:
+                self._speaking = False
 
     def ask_gpt(self, prompt: str) -> str:
         try:
@@ -163,9 +197,9 @@ class VoiceProcessor:
             self.speak(wiki)
             return
 
-        print("[ASSISTANT] использую GPT")
-        answer = self.ask_gpt(text)
-        self.speak(answer)
+        # print("[ASSISTANT] использую GPT")
+        # answer = self.ask_gpt(text)
+        # self.speak(answer)
 
     def setup_microphone(self):
         with self.microphone as source:
@@ -316,6 +350,11 @@ class VoiceProcessor:
     def listen(self):
         def callback(recognizer: sr.Recognizer, audio: sr.AudioData):
             try:
+
+                if self._speaking or time.time() < self._mute_until:
+                    return
+
+
                 text = recognizer.recognize_google(audio, language="ru-RU").lower()
                 print("Распознано:", text)
 
@@ -330,7 +369,7 @@ class VoiceProcessor:
                     ).start()
                     return
 
-                if self.DOM_WORDS & words:
+                if (self.DOM_WORDS & words) and not (self.WEATHER_WORDS & words):
                     self.activate_dialog(10)
                     clean_text = self.remove_wake_words(text)
                     if clean_text:
@@ -359,7 +398,7 @@ class VoiceProcessor:
                         return
 
 
-                if self.ASSISTANT_WORDS & words:
+                if (self.ASSISTANT_WORDS & words) and not (self.WEATHER_WORDS & words):
                     threading.Thread(
                         target=self.handle_assistant_request,
                         args=(text,),
@@ -383,7 +422,7 @@ class VoiceProcessor:
                 return
 
         print("Запускаю фоновое прослушивание")
-        self.recognizer.listen_in_background(
+        self._stop_listening = self.recognizer.listen_in_background(
             self.microphone,
             callback,
             phrase_time_limit=5,
