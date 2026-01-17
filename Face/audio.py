@@ -6,55 +6,28 @@ import pyttsx3
 import speech_recognition as sr
 import wikipedia
 from openai import OpenAI
+import camera
 
 client = OpenAI(api_key="")
 wikipedia.set_lang("ru")
 
-# tts = pyttsx3.init()
-# tts.setProperty("rate", 200)
-# tts_lock = threading.Lock()
-
 
 class VoiceProcessor:
     TOMORROW_WORDS = {
-        "завтра",
-        "завтро",
-        "завтрашняя",
-        "завтрашнюю",
-        "завтрашней"
+        "завтра", "завтро", "завтрашняя", "завтрашнюю", "завтрашней"
     }
 
     WEATHER_WORDS = {
-        "погода",
-        "погод",
-        "пагода",
-        "пог"
+        "погода", "погод", "пагода", "пог"
     }
 
     DOM_WORDS = {
-        "дом",
-        "дам",
-        "том",
-        "дон",
-        "домой",
-        "дома",
-        "домик",
-        "дном",
-        "док",
-        "домъ"
+        "дом", "дам", "том", "дон", "домой", "дома", "домик", "дном", "док", "домъ"
     }
 
     ASSISTANT_WORDS = {
-        "ассистент",
-        "асистент",
-        "ассистэнт",
-        "асистэнт",
-        "ассист",
-        "ассик",
-        "ассис",
-        "ассет",
-        "ассистен",
-        "асист"
+        "ассистент", "асистент", "ассистэнт", "асистэнт",
+        "ассист", "ассик", "ассис", "ассет", "ассистен", "асист"
     }
 
     def __init__(self):
@@ -71,24 +44,21 @@ class VoiceProcessor:
             "избушка крути": self.start_casino,
             "избушка рычаг": self.pull_lever,
             "избушка отмена": self.exit_casino,
+            "избушка рисуй": self.start_drawing,
+            "избушка рисовать": self.start_drawing,
+            "избушка стоп рисование": self.stop_drawing,
+            "избушка останови рисование": self.stop_drawing,
+            "избушка хватит рисовать": self.stop_drawing,
         }
-
 
         self.system_prompt = {
             "role": "system",
-            "content": (
-                "Ты голосовой ассистент «Избушка». "
-                "Отвечай кратко, по-русски, без лишних объяснений."
-            )
+            "content": "Ты голосовой ассистент «Избушка». Отвечай кратко, по-русски, без лишних объяснений."
         }
 
-        self.dialog_history=[self.system_prompt]
-
+        self.dialog_history = [self.system_prompt]
         self.recognizer = sr.Recognizer()
-
         self._stop_listening = None
-
-
         self.dialog_active = False
         self.dialog_until = 0.0
 
@@ -101,24 +71,20 @@ class VoiceProcessor:
             chunk_size=2048,
         )
 
-        self.command_queue: "queue.Queue[callable]" = queue.Queue() #очередь для функций
+        self.command_queue = queue.Queue()
         self.setup_microphone()
 
-        self.tts_queue: "queue.Queue[str]" = queue.Queue() #очередь для произношения
+        self.tts_queue = queue.Queue()
         self._tts_running = True
         self._tts_lock = threading.Lock()
-
         self._speaking = False
         self._mute_until = 0.0
-
 
         self._tts_thread = threading.Thread(target=self._tts_worker, daemon=True)
         self._tts_thread.start()
 
-
-
     def speak(self, text: str):
-        print("ассистент говорит:", text)
+        print("Ассистент говорит:", text)
         self.tts_queue.put(text)
 
     def trim_dialog_history(self, max_mess=5):
@@ -137,11 +103,9 @@ class VoiceProcessor:
                 with self._tts_lock:
                     self._speaking = True
                     self._mute_until = time.time() + 0.4
-
                     engine.stop()
                     engine.say(text)
                     engine.runAndWait()
-
             except Exception as e:
                 print("TTS error:", e)
             finally:
@@ -156,10 +120,8 @@ class VoiceProcessor:
                 messages=self.dialog_history
             )
             answer = response.choices[0].message.content
-
             self.dialog_history.append({"role": "assistant", "content": answer})
             self.trim_dialog_history()
-
             print("[GPT] ответ получен")
             return answer
         except Exception as e:
@@ -175,7 +137,6 @@ class VoiceProcessor:
 
     def handle_gpt_wake(self, text: str):
         text = text.replace("дом", "").strip()
-
         if text == "":
             self.speak("Готов ответить. Скажи, что тебя интересует.")
             return
@@ -186,7 +147,6 @@ class VoiceProcessor:
 
     def handle_assistant_request(self, text: str):
         text = text.replace("ассистент", "").strip()
-
         if text == "":
             self.speak("Да, я слушаю.")
             return
@@ -197,10 +157,6 @@ class VoiceProcessor:
             self.speak(wiki)
             return
 
-        # print("[ASSISTANT] использую GPT")
-        # answer = self.ask_gpt(text)
-        # self.speak(answer)
-
     def setup_microphone(self):
         with self.microphone as source:
             print("Калибрую микрофон...")
@@ -209,7 +165,6 @@ class VoiceProcessor:
 
     def random_expression(self):
         from reaction import get_random_expression
-
         expression = get_random_expression()
         try:
             requests.post(
@@ -259,7 +214,7 @@ class VoiceProcessor:
         try:
             url = "https://api.open-meteo.com/v1/forecast"
             params = {
-                "latitude": 55.0084,  # Новосибирск
+                "latitude": 55.0084,
                 "longitude": 82.9357,
                 "daily": "temperature_2m_max,temperature_2m_min,weathercode",
                 "timezone": "Asia/Novosibirsk"
@@ -271,53 +226,27 @@ class VoiceProcessor:
             temp_max = round(data["daily"]["temperature_2m_max"][day_index])
             temp_min = round(data["daily"]["temperature_2m_min"][day_index])
             code = data["daily"]["weathercode"][day_index]
-
             desc = self.decode_weather_code(code)
 
             if day_index == 0:
-                text = (
-                    f"Сегодня в Новосибирске {desc}. "
-                    f"Температура от {temp_min} до {temp_max} градусов."
-                )
+                text = f"Сегодня в Новосибирске {desc}. Температура от {temp_min} до {temp_max} градусов."
             elif day_index == 1:
-                text = (
-                    f"Завтра в Новосибирске {desc}. "
-                    f"Температура от {temp_min} до {temp_max} градусов."
-                )
+                text = f"Завтра в Новосибирске {desc}. Температура от {temp_min} до {temp_max} градусов."
             else:
-                text = (
-                    f"Послезавтра в Новосибирске {desc}. "
-                    f"Температура от {temp_min} до {temp_max} градусов."
-                )
+                text = f"Послезавтра в Новосибирске {desc}. Температура от {temp_min} до {temp_max} градусов."
 
             self.speak(text)
-
         except Exception as e:
             print("[WEATHER error]:", e)
             self.speak("Не удалось получить погоду.")
 
-
     def decode_weather_code(self, code: int) -> str:
         mapping = {
-            0: "ясно",
-            1: "в основном ясно",
-            2: "переменная облачность",
-            3: "пасмурно",
-            45: "туман",
-            48: "изморозь",
-            51: "лёгкая морось",
-            53: "морось",
-            55: "сильная морось",
-            61: "небольшой дождь",
-            63: "дождь",
-            65: "сильный дождь",
-            71: "небольшой снег",
-            73: "снег",
-            75: "сильный снег",
-            80: "ливень",
-            81: "сильный ливень",
-            82: "очень сильный ливень",
-            95: "гроза"
+            0: "ясно", 1: "в основном ясно", 2: "переменная облачность", 3: "пасмурно",
+            45: "туман", 48: "изморозь", 51: "лёгкая морось", 53: "морось", 55: "сильная морось",
+            61: "небольшой дождь", 63: "дождь", 65: "сильный дождь",
+            71: "небольшой снег", 73: "снег", 75: "сильный снег",
+            80: "ливень", 81: "сильный ливень", 82: "очень сильный ливень", 95: "гроза"
         }
         return mapping.get(code, "неизвестная погода")
 
@@ -328,32 +257,26 @@ class VoiceProcessor:
     def is_dialog_active(self):
         if not self.dialog_active:
             return False
-
         if time.time() > self.dialog_until:
             self.dialog_active = False
             return False
-
         return True
 
     def remove_wake_words(self, text: str) -> str:
         words = text.split()
-
         filtered = [
             w for w in words
             if w not in self.DOM_WORDS
                and w not in self.ASSISTANT_WORDS
                and w not in self.WEATHER_WORDS
         ]
-
         return " ".join(filtered).strip()
 
     def listen(self):
         def callback(recognizer: sr.Recognizer, audio: sr.AudioData):
             try:
-
                 if self._speaking or time.time() < self._mute_until:
                     return
-
 
                 text = recognizer.recognize_google(audio, language="ru-RU").lower()
                 print("Распознано:", text)
@@ -381,6 +304,7 @@ class VoiceProcessor:
                     else:
                         self.speak("Я слушаю")
                     return
+
                 if self.WEATHER_WORDS & words:
                     if self.TOMORROW_WORDS & words:
                         threading.Thread(
@@ -394,9 +318,7 @@ class VoiceProcessor:
                             args=(0,),
                             daemon=True
                         ).start()
-
-                        return
-
+                    return
 
                 if (self.ASSISTANT_WORDS & words) and not (self.WEATHER_WORDS & words):
                     threading.Thread(
@@ -431,3 +353,27 @@ class VoiceProcessor:
         worker = threading.Thread(target=self.process_commands)
         worker.daemon = True
         worker.start()
+
+    def start_drawing(self):
+        """Запуск режима рисования"""
+        try:
+            success = camera.start_drawing_mode()
+            if success:
+                self.speak("Режим рисования активирован")
+            else:
+                self.speak("Режим рисования уже активен")
+        except Exception as e:
+            print(f"Ошибка запуска рисования: {e}")
+            self.speak("Не удалось запустить режим рисования")
+
+    def stop_drawing(self):
+        """Остановка режима рисования"""
+        try:
+            success = camera.stop_drawing_mode()
+            if success:
+                self.speak("Режим рисования остановлен")
+            else:
+                self.speak("Режим рисования не был активен")
+        except Exception as e:
+            print(f"Ошибка остановки рисования: {e}")
+            self.speak("Ошибка при остановке рисования")
