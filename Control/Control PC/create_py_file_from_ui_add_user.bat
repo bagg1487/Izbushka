@@ -1,0 +1,1 @@
+..\venv\Scripts\pyuic5.exe -x ui_add_user.ui -o ui_add_user.py
