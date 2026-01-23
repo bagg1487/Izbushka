@@ -7,3 +7,5 @@
 [STM32Arduino](./STM32Arduino) - Код на STM32, разработка своего проекта
 
 [OpiServer](./OpiServer) - сервер на OrangePi для управления избушкой
+
+[Control](./Control) - код для управления избушкой через ПК/телефон
