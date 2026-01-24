@@ -17,15 +17,15 @@ from Command import LegNames as ln
 from Command import ServNames as sn
 
 import cv2
-
+import pygame
 
 class MyWindow(QMainWindow, Ui_MainWindow):
     def __init__(self):
-        """ Инициализация переменных для окон"""
         super(MyWindow, self).__init__()
         self.add_user_window = None
         self.calibrationWindow = None
         self.setupUi(self)
+        
         self.pushButton.clicked.connect(self.connect)
         self.Button_Forward.pressed.connect(self.forward)
         self.Button_Forward.released.connect(self.stop)
@@ -40,11 +40,8 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         self.hands_up.clicked.connect(self.hands)
         self.Play_Music.clicked.connect(self.play_music)
         self.Pause_Music.clicked.connect(self.stop_music)
-        #self.About_me.clicked.connect(self.about)
         self.func1.clicked.connect(self.fnc1)
         self.func2.clicked.connect(self.fnc2)
-        #self.func3.clicked.connect(self.fnc3)
-        #self.func4.clicked.connect(self.fnc4)
 
         self.func3.pressed.connect(self.fnc3)
         self.func3.released.connect(self.lookstop)
@@ -72,148 +69,236 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         self.timer_video = QTimer(self)
         self.timer_video.timeout.connect(self.get_video_frame)
         self.timer_video.start(10)
+        
         self.client = Client()
+        
+        self.gamepad = None
+        self.gamepad_timer = QTimer(self)
+        self.gamepad_timer.timeout.connect(self.check_gamepad)
+        self.init_gamepad()
+
+    def init_gamepad(self):
+        pygame.init()
+        pygame.joystick.init()
+        if pygame.joystick.get_count() > 0:
+            self.gamepad = pygame.joystick.Joystick(0)
+            self.gamepad.init()
+            print(f"Gamepad connected: {self.gamepad.get_name()}")
+            self.gamepad_timer.start(50)
+
+    def keyPressEvent(self, event):
+        if not self.client.tcp_flag:
+            return
+            
+        if event.key() == Qt.Key_W:
+            self.forward()
+        elif event.key() == Qt.Key_S:
+            self.backward()
+        elif event.key() == Qt.Key_A:
+            self.left()
+        elif event.key() == Qt.Key_D:
+            self.right()
+        elif event.key() == Qt.Key_1:
+            self.fnc1()
+        elif event.key() == Qt.Key_2:
+            self.fnc2()
+        elif event.key() == Qt.Key_3:
+            self.fnc3()
+        elif event.key() == Qt.Key_4:
+            self.fnc4()
+        elif event.key() == Qt.Key_Space:
+            self.stop()
+        elif event.key() == Qt.Key_M:
+            self.play_music()
+        elif event.key() == Qt.Key_N:
+            self.stop_music()
+        elif event.key() == Qt.Key_R:
+            self.RadioPlay()
+        elif event.key() == Qt.Key_T:
+            self.RadioStop()
+        elif event.key() == Qt.Key_H:
+            self.hands()
+        elif event.key() == Qt.Key_V:
+            self.sonic()
+        elif event.key() == Qt.Key_Escape:
+            self.Menu()
+
+    def keyReleaseEvent(self, event):
+        if event.key() in (Qt.Key_W, Qt.Key_S, Qt.Key_A, Qt.Key_D, Qt.Key_3, Qt.Key_4):
+            self.stop()
+            if event.key() in (Qt.Key_3, Qt.Key_4):
+                self.lookstop()
+
+    def check_gamepad(self):
+        if not self.gamepad or not self.client.tcp_flag:
+            return
+            
+        pygame.event.pump()
+        
+        left_y = self.gamepad.get_axis(1)
+        left_x = self.gamepad.get_axis(0)
+        right_y = self.gamepad.get_axis(3)
+        
+        A = self.gamepad.get_button(0)
+        B = self.gamepad.get_button(1)
+        X = self.gamepad.get_button(2)
+        Y = self.gamepad.get_button(3)
+        LB = self.gamepad.get_button(4)
+        RB = self.gamepad.get_button(5)
+        back = self.gamepad.get_button(6)
+        start = self.gamepad.get_button(7)
+        
+        deadzone = 0.2
+        
+        if abs(left_y) > deadzone:
+            if left_y < -deadzone:
+                self.forward()
+            elif left_y > deadzone:
+                self.backward()
+        elif abs(left_x) > deadzone:
+            if left_x < -deadzone:
+                self.left()
+            elif left_x > deadzone:
+                self.right()
+        else:
+            self.stop()
+        
+        if abs(right_y) > deadzone:
+            if right_y < -deadzone:
+                self.fnc3()
+            elif right_y > deadzone:
+                self.fnc4()
+        else:
+            self.lookstop()
+        
+        if A:
+            self.fnc1()
+        if B:
+            self.fnc2()
+        if X:
+            self.play_music()
+        if Y:
+            self.stop_music()
+        if LB:
+            self.RadioPlay()
+        if RB:
+            self.RadioStop()
+        if back:
+            self.hands()
+        if start:
+            self.Menu()
 
     def connect(self):
-        """событие по нажатию кнопки Connect"""
         self.lineEdit.text()
-        file = open('IP.txt', 'w')  # Открыть файл на запись
-        file.write(self.lineEdit.text())  # записать ip  из поля
-        file.close()  # закрыть файл
+        file = open('IP.txt', 'w')
+        file.write(self.lineEdit.text())
+        file.close()
         pattern = r'^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'
 
-        if self.pushButton.text() == 'Connect':  # Если надпись Connect
+        if self.pushButton.text() == 'Connect':
             if re.match(pattern, self.lineEdit.text()):
-                self.IP = self.lineEdit.text()  # получаем ip адрес из поля
+                self.IP = self.lineEdit.text()
 
-                self.client.turn_on_client(
-                    self.IP)  # функция которая устанавливает 2 соединения по IP. client_socket1 для передачи инструкций и client_socket для приема видео
-                self.video = threading.Thread(target=self.client.receiving_video,
-                                              args=(self.IP,))  # Создается поток для приема видео
-                self.instruction = threading.Thread(target=self.receive_instruction,
-                                                    args=(self.IP,))  # Создается поток для передачи инструкций
-                self.video.start()  # Запуск потока
-                self.instruction.start()  # Запуск потока
-                self.pushButton.setText('Disconnect')  # смена названия кнопки
+                self.client.turn_on_client(self.IP)
+                self.video = threading.Thread(target=self.client.receiving_video, args=(self.IP,))
+                self.instruction = threading.Thread(target=self.receive_instruction, args=(self.IP,))
+                self.video.start()
+                self.instruction.start()
+                self.pushButton.setText('Disconnect')
                 self.label_err.setText(" ")
             else:
                 self.label_err.setText("Ошибка ввода ip")
-
-            # self.timer_power.start(1000) #
         else:
             self.client.stop_video_thread = True
             self.client.stop_instruction_thread = True
             self.client.tcp_flag = False
             self.client.turn_off_client()
             self.pushButton.setText('Connect')
-            # self.timer_power.stop()
 
     def receive_instruction(self, ip):
-        """Открытие потока приема команд"""
         try:
-            # Подключаемся к серверу по адресу ip и порту 5001
             self.client.client_socket1.connect((ip, 5001))
-            self.client.tcp_flag = True  # Устанавливаем флаг TCP-соединения как активный
-            print("Connection Successful !")  # Выводим сообщение об успешном подключении
-            # Отправляем команду на сервер для калибровки всех устройств
+            self.client.tcp_flag = True
+            print("Connection Successful !")
             self.client.send_data(cmd.CMD_CALIBRATION_ALL + '\n')
         except Exception as e:
-            print(
-                "Connect to server Faild!: Server IP is right? Server is opend?")  # Выводим сообщение об ошибке подключения
-            self.client.tcp_flag = False  # Устанавливаем флаг TCP-соединения как неактивный
+            print("Connect to server Faild!: Server IP is right? Server is opend?")
+            self.client.tcp_flag = False
         while True:
             try:
-                # Получаем данные от сервера
                 alldata = self.client.receive_data()
             except:
-                self.client.tcp_flag = False  # Устанавливаем флаг TCP-соединения как неактивный
+                self.client.tcp_flag = False
                 break
             print(alldata)
             if alldata == '':
                 break
             else:
-                cmdArray = alldata.split('\n')  # Разбиваем полученные данные на массив по символу новой строки
+                cmdArray = alldata.split('\n')
                 print(cmdArray)
                 if cmdArray[-1] != "":
                     cmdArray == cmdArray[:-1]
             for oneCmd in cmdArray:
-                data = oneCmd.split("#")  # Разбиваем команду на части по символу '#'
+                data = oneCmd.split("#")
                 if data == "":
-                    self.client.tcp_flag = False  # Устанавливаем флаг TCP-соединения как неактивный
+                    self.client.tcp_flag = False
                     break
                 elif data[0] == cmd.CMD_SONIC:
-                    self.Button_Sonic.setText(
-                        data[1] + 'cm')  # Обновляем текст кнопки с информацией об обнаруженном препятствии
+                    self.Button_Sonic.setText(data[1] + 'cm')
                 elif data[0] == cmd.CMD_CALIBRATION_ALL:
-                    # Обновляем список углов калибровки для всех устройств
                     self.list_angle = []
                     self.list_angle.append(data[1:6])
                     self.list_angle.append(data[6:11])
                     self.list_angle.append(data[11:16])
                     self.list_angle.append(data[16:21])
                 else:
-                    pass  # Пропускаем команды, для которых нет обработчика
+                    pass
 
     def get_video_frame(self):
         try:
             if self.client.video_flag == False:
-                # Получаем высоту, ширину и количество байт на компоненту изображения
                 height, width, bytesPerComponent = self.client.image.shape
-                # Конвертируем изображение из формата BGR в RGB
                 cv2.cvtColor(self.client.image, cv2.COLOR_BGR2RGB, self.client.image)
-                # Создаем объект QImage из данных изображения
                 QImg = QImage(self.client.image.data, width, height, 3 * width, QImage.Format_RGB888)
-                # Создаем объект QPixmap из QImage и масштабируем его до размеров 400x240
                 pixmap = QPixmap.fromImage(QImg).scaled(390, 240)
-                # Устанавливаем QPixmap в виджет QLabel для отображения видеопотока
                 self.Video_label.setPixmap(pixmap)
-                self.client.video_flag = True  # Устанавливаем флаг видео как активный
+                self.client.video_flag = True
         except Exception as e:
-            print(e)  # Выводим ошибку, если она возникает
+            print(e)
 
     def stop(self):
         command = cmd.CMD_MOVE_STOP + "#" + str(self.slider_speed.value()) + '\n'
         self.client.send_data(command)
-        # print (command)
 
     def forward(self):
         command = cmd.CMD_MOVE_FORWARD + "#" + str(self.slider_speed.value()) + '\n'
-        # command = cmd.CMD_SONIC + '\n'
         self.client.send_data(command)
-        # print (command)
 
     def backward(self):
         command = cmd.CMD_MOVE_BACKWARD + "#" + str(self.slider_speed.value()) + '\n'
         self.client.send_data(command)
-        # print (command)
 
     def left(self):
         command = cmd.CMD_MOVE_LEFT + "#" + str(self.slider_speed.value()) + '\n'
         self.client.send_data(command)
-        # print (command)
 
     def right(self):
         command = cmd.CMD_MOVE_RIGHT + "#" + str(self.slider_speed.value()) + '\n'
         self.client.send_data(command)
-        # print (command)
 
     def sonic(self):
         if self.Button_Sonic.text() == 'Sonic':
             self.timer_sonic.start(100)
             self.Button_Sonic.setText('Close')
-
         else:
             self.timer_sonic.stop()
             self.Button_Sonic.setText('Sonic')
-            #
 
     def getSonicData(self):
         command = cmd.CMD_SONIC + '\n'
         self.client.send_data(command)
-        # print (command)
 
     def calibration(self):
-        # self.stop()
         self.client.send_data(cmd.CMD_CALIBRATION_MOD + '#' + '1' + '\n')
         self.calibrationWindow = CalibrationWindow(self.client, self.list_angle)
         self.calibrationWindow.setWindowModality(Qt.ApplicationModal)
@@ -257,6 +342,7 @@ class MyWindow(QMainWindow, Ui_MainWindow):
     def lookstop(self):
         command = cmd.CMD_LOOK_STOP + '\n'
         self.client.send_data(command)
+        
     def Menu(self):
         command = cmd.CMD_MENU + '\n'
         self.client.send_data(command)
@@ -304,7 +390,6 @@ class MyWindow(QMainWindow, Ui_MainWindow):
 
 class CalibrationWindow(QMainWindow, Ui_Calibration):
     def __init__(self, client, list_angle):
-        """Инициализация интерфейса"""
         super(CalibrationWindow, self).__init__()
         self.setupUi(self)
         self.client = client
@@ -332,9 +417,7 @@ class CalibrationWindow(QMainWindow, Ui_Calibration):
         self.button_E_less.clicked.connect(lambda: self.serv_angle_change(sn.E, -1))
         self.button_end_calibration.clicked.connect(lambda: self.calibration_start_or_end(False))
 
-
     def show_data(self, leg_name):
-        """Отображение данных о текущих углах калибровки для выбранной ноги"""
         self.leg = leg_name
         if leg_name == ln.L:
             self.lineEdit_A.setText(self.list_angle[0][0])
@@ -360,9 +443,8 @@ class CalibrationWindow(QMainWindow, Ui_Calibration):
             self.lineEdit_C.setText(self.list_angle[3][2])
             self.lineEdit_D.setText(self.list_angle[3][3])
             self.lineEdit_E.setText(self.list_angle[3][4])
+            
     def serv_angle_change(self, serv_num, more_or_less):
-        """Изменение угла сервопривода и отправка команды на сервер"""
-        # self.get_point()
         self.list_angle[self.leg.value][serv_num.value] = str(
             int(self.list_angle[self.leg.value][serv_num.value]) + more_or_less)
         self.show_data(self.leg)
@@ -370,10 +452,8 @@ class CalibrationWindow(QMainWindow, Ui_Calibration):
         command = cmd.CMD_CALIBRATION + '#' + self.leg.name + '#' + serv_num.name + '#' + str(
             self.list_angle[self.leg.value][serv_num.value]) + '\n'
         self.client.send_data(command)
-        # print(command)
 
     def calibration_start_or_end(self, start_or_end):
-        """Запуск или завершение процесса калибровки"""
         if start_or_end:
             command = cmd.CMD_CALIBRATION_MOD + '#' + '1' + '\n'
         else:
@@ -383,37 +463,26 @@ class CalibrationWindow(QMainWindow, Ui_Calibration):
 
 class AddUserWindow(QMainWindow, Ui_Add_user):
     def __init__(self, client):
-        """Инициализация интерфейса"""
         super(AddUserWindow, self).__init__()
-        # Инициализация интерфейса
         self.setupUi(self)
-        # Передача экземпляра клиента
         self.client = client
-        # Настройка таймера для получения видеокадров и его запуск
         self.timer_video = QTimer(self)
         self.timer_video.timeout.connect(self.get_video_frame)
         self.timer_video.start(10)
-        # Привязка обработчика события к кнопке для съемки фото
         self.takePhotoButton.pressed.connect(self.take_photo)
 
     def get_video_frame(self):
-        """Получение кадра трансляции"""
         try:
             if not self.client.video_flag:
-                # Получение высоты, ширины и количества байт на компоненту изображения
                 height, width, bytesPerComponent = self.client.image.shape
-                # Конвертация изображения из формата BGR в RGB
                 cv2.cvtColor(self.client.image, cv2.COLOR_BGR2RGB, self.client.image)
-                # Создание объекта QImage из данных изображения
                 QImg = QImage(self.client.image.data, width, height, 3 * width, QImage.Format_RGB888)
-                # Установка изображения в виджет QLabel
                 self.Video_Label.setPixmap(QPixmap.fromImage(QImg))
                 self.client.video_flag = True
         except Exception as e:
             print(e)
 
     def take_photo(self):
-        """Съемка фото при нажатии кнопки"""
         if self.lineEdit.text() != '':
             command = cmd.CMD_TAKE_PHOTO + '#' + self.lineEdit.text() + '\n'
             self.client.send_data(command)
