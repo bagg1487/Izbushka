@@ -1,4 +1,3 @@
-![GIF](https://github.com/Darkness1853/Pictures/blob/main/R%20(1).gif)
 
 [Face](./Face) - проект лица Избушки
 
