@@ -1,0 +1,6 @@
+# Тестовые рабочие радиостанции для России
+http://icecast.vgtrk.cdnvideo.ru/mayakfm_mp3_192kbps
+http://nashe1.hostingradio.ru/nashe-128.mp3
+http://air.radiorecord.ru:805/rr_320
+http://stream.radioparadise.com/mp3-192
+http://icecast.omroep.nl/radio1-bb-mp3
