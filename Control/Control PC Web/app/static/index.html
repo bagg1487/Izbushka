@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Избушка · Старославянский стиль</title>
+    <!-- Font Awesome для иконок (камера, информация, ssh, anydesk) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            background: #2e1b0e url('data:image/svg+xml;utf8,<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M20 10 L30 0 L45 0 L55 10 L45 25 L30 25 L20 10 M70 10 L80 0 L95 0 L100 10 L95 25 L80 25 L70 10 M10 50 L20 40 L35 40 L45 50 L35 65 L20 65 L10 50 M55 50 L65 40 L80 40 L90 50 L80 65 L65 65 L55 50" fill="%23b89b6e" opacity="0.15"/></svg>') repeat;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 1.5rem;
+            font-family: 'Palatino', 'Georgia', 'Times New Roman', serif;
+        }
+
+        /* главный свиток */
+        .scroll-panel {
+            max-width: 1000px;
+            width: 100%;
+            background: #efdebc; /* старый пергамент */
+            background: radial-gradient(circle at 20% 30%, #f8e9cf, #dac292);
+            border-radius: 150px 150px 60px 60px;
+            box-shadow: 
+                0 20px 30px -5px #1f140a,
+                inset 0 -8px 12px #b4946b,
+                inset 0 8px 15px #fff6e0,
+                0 0 0 8px #7b5f3f,
+                0 0 0 12px #aa8b5e;
+            padding: 35px 30px 40px 30px;
+            border: 3px solid #6b4f32;
+            position: relative;
+        }
+
+        /* орнамент сверху и снизу (древнерусский узор) */
+        .ornament-top, .ornament-bottom {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin: 10px 0 15px 0;
+        }
+
+        .ornament-top span, .ornament-bottom span {
+            font-size: 2.5rem;
+            color: #976b42;
+            text-shadow: 2px 2px 3px #3d2b18;
+            letter-spacing: 12px;
+        }
+
+        .ornament-bottom {
+            margin-top: 30px;
+        }
+
+        /* большой баннер с изображением избушки */
+        .hero-iconic {
+            background: #c9ae83;
+            background: linear-gradient(165deg, #e2c9a1, #b58f60);
+            padding: 30px 20px 20px 20px;
+            margin: 5px 0 35px 0;
+            border-radius: 120px 120px 60px 60px;
+            box-shadow: 
+                inset 0 -5px 8px #9a764b,
+                inset 0 5px 12px #ffefcf,
+                0 12px 0 #5f442a,
+                0 20px 20px -5px #1f150b;
+            border: 3px solid #ebd0a4;
+            text-align: center;
+        }
+
+        /* контейнер для картинки избушки (PNG) */
+        .hut-image {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .hut-image img {
+            max-width: 220px;
+            width: 100%;
+            height: auto;
+            filter: drop-shadow(8px 12px 8px #3a2c1b);
+            image-rendering: crisp-edges; /* для сохранения чёткости пиксельной графики */
+        }
+
+        /* архаичная надпись под избушкой */
+        .hut-caption {
+            font-size: 2.2rem;
+            font-weight: bold;
+            color: #2a1d0d;
+            text-shadow: 
+                2px 2px 0 #b58649,
+                4px 4px 0 #5b401f,
+                0 6px 10px #00000050;
+            letter-spacing: 8px;
+            font-family: 'Georgia', 'Times', serif;
+            text-transform: uppercase;
+            border-top: 3px double #ab7a41;
+            border-bottom: 3px double #ab7a41;
+            display: inline-block;
+            padding: 10px 30px;
+            margin-top: 5px;
+            background: #8b693fb0;
+            border-radius: 100px;
+            backdrop-filter: blur(1px);
+        }
+
+        /* сетка для четырёх кнопок (как ладьи или ставни) */
+        .button-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 25px;
+            padding: 20px 5px 10px 5px;
+        }
+
+        /* стиль кнопки — древняя чеканка */
+        .slavic-btn {
+            background: #7c623e;
+            background: linear-gradient(150deg, #b4935c, #6e4f2b);
+            border: 4px ridge #ecca90;
+            border-radius: 60px 60px 30px 30px;
+            padding: 25px 10px 15px 10px;
+            box-shadow: 
+                0 10px 0 #4c351b,
+                0 15px 20px #00000060,
+                inset 0 -6px 8px #ffdd9e,
+                inset 0 4px 10px #ffffd4;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 18px;
+            cursor: pointer;
+            transition: all 0.1s ease-out;
+            color: #fff4d6;
+            text-shadow: 3px 3px 0 #412f18;
+            font-weight: 800;
+            font-size: 1.7rem;
+            border-top: 6px solid #e9c68e;
+            border-bottom: 6px solid #4f381c;
+            font-family: 'Georgia', 'Times New Roman', serif;
+        }
+
+        .slavic-btn i {
+            font-size: 3.5rem;
+            filter: drop-shadow(4px 6px 2px #2d1e0b);
+            color: #ffefc8;
+        }
+
+        .btn-label {
+            font-size: 1.4rem;
+            background: #392f1eb3;
+            padding: 8px 20px;
+            border-radius: 60px;
+            border: 2px solid #edb87a;
+            box-shadow: inset 0 2px 6px #ffe7b0;
+            text-transform: lowercase;
+            font-weight: 600;
+            letter-spacing: 2px;
+            backdrop-filter: blur(2px);
+            color: #fcf0da;
+        }
+
+        /* нажатие */
+        .slavic-btn:active {
+            transform: translateY(7px);
+            box-shadow: 
+                0 3px 0 #4c351b,
+                0 12px 18px #00000080,
+                inset 0 -3px 5px #caa76d,
+                inset 0 2px 10px #fffad6;
+        }
+
+        .slavic-btn:hover {
+            background: #a88754;
+            background: linear-gradient(150deg, #cfb07c, #9f7a48);
+            border-top-color: #ffdeaa;
+        }
+
+        /* логотип организации внизу (старославянский стиль) */
+        .org-footer {
+            margin-top: 30px;
+            padding: 18px 25px;
+            background: #896e44;
+            background: linear-gradient(145deg, #b6915c, #6f522e);
+            border-radius: 100px 100px 30px 30px;
+            border: 3px solid #ebc181;
+            box-shadow: 
+                inset 0 -3px 8px #4a361b,
+                inset 0 3px 12px #fdecc3,
+                0 8px 0 #4a341d,
+                0 12px 20px #00000050;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .org-logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .org-logo img {
+            max-height: 65px;
+            width: auto;
+            filter: drop-shadow(3px 5px 3px #2a1c0c) brightness(1.2);
+        }
+
+        .org-text {
+            font-size: 2rem;
+            color: #ffeec9;
+            text-shadow: 3px 3px 0 #4d3219, 5px 5px 0 #1f150a;
+            letter-spacing: 4px;
+            font-weight: bold;
+            font-family: 'Georgia', 'Times', serif;
+            text-transform: uppercase;
+            border-left: 3px solid #efd09e;
+            padding-left: 20px;
+        }
+
+        .org-placeholder {
+            font-size: 1.9rem;
+            color: #ffe1a4;
+            text-shadow: 2px 2px 0 #634b28;
+            font-style: italic;
+            padding: 0 10px;
+        }
+
+        /* декоративные элементы — кириллические буквы */
+        .old-cyr {
+            font-size: 1.9rem;
+            color: #7b623c;
+            margin: 0 5px;
+        }
+
+        /* адаптация под мобильные */
+        @media (max-width: 750px) {
+            .button-grid {
+                gap: 12px;
+            }
+            .slavic-btn {
+                padding: 15px 5px 10px;
+                font-size: 1.2rem;
+            }
+            .slavic-btn i {
+                font-size: 2.5rem;
+            }
+            .btn-label {
+                font-size: 1rem;
+                padding: 5px 10px;
+            }
+            .hut-caption {
+                font-size: 1.8rem;
+                letter-spacing: 4px;
+            }
+            .org-text {
+                font-size: 1.5rem;
+            }
+        }
+
+        @media (max-width: 550px) {
+            .button-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+            .org-footer {
+                flex-direction: column;
+                text-align: center;
+            }
+            .org-text {
+                border-left: none;
+                border-top: 3px solid #efd09e;
+                padding-top: 12px;
+                padding-left: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="scroll-panel">
+        <!-- верхний орнамент (солярные символы) -->
+        <div class="ornament-top">
+            <span>☦</span>
+            <span>✧</span>
+            <span>ꙮ</span>
+            <span>✴</span>
+            <span>ꙮ</span>
+            <span>✧</span>
+            <span>☦</span>
+        </div>
+
+        <!-- большой баннер с изображением избушки (PNG) -->
+        <div class="hero-iconic">
+            <div class="hut-image">
+                <!-- ЗДЕСЬ ВСТАВЬТЕ ССЫЛКУ НА ВАШУ PNG ИЗБУШКУ -->
+                <img src="img/izba.png"
+                     title="Избушка">
+            </div>
+            <!-- подпись вязью -->
+            <div class="hut-caption">
+                ИЗБУШКА
+            </div>
+        </div>
+
+        <!-- четыре кнопки в древнерусском стиле -->
+        <div class="button-grid">
+            <!-- camera -->
+            <div class="slavic-btn" role="button" tabindex="0" title="Око (камера)">
+                <i class="fas fa-camera-retro"></i>
+                <span class="btn-label">камера</span>
+            </div>
+            <!-- info -->
+            <div class="slavic-btn" role="button" tabindex="0" title="Вести (инфо)">
+                <i class="fas fa-scroll"></i>  <!-- свиток вместо info -->
+                <span class="btn-label">вѣсти</span>
+            </div>
+            <!-- ssh -->
+            <div class="slavic-btn" role="button" tabindex="0" title="Доступъ ssh">
+                <i class="fas fa-key"></i>
+                <span class="btn-label">ключь</span>
+            </div>
+            <!-- anydesk -->
+            <div class="slavic-btn" role="button" tabindex="0" title="Зрѣлище AnyDesk">
+                <i class="fas fa-tower-broadcast"></i> <!-- терем/вещание -->
+                <span class="btn-label">anydesk</span>
+            </div>
+        </div>
+
+        <!-- нижний орнамент -->
+        <div class="ornament-bottom">
+            <span>ꙮ</span>
+            <span>✴</span>
+            <span>☦</span>
+            <span>✧</span>
+            <span>ꙮ</span>
+            <span>✴</span>
+            <span>☦</span>
+        </div>
+
+        <!-- ЛОГОТИП ОРГАНИЗАЦИИ (внизу) -->
+        <div class="org-footer">
+            <div class="org-logo">
+                <!-- ЗДЕСЬ ВСТАВЬТЕ ССЫЛКУ НА ЛОГОТИП (PNG) -->
+                <img src="img/YADRO--1024X1024.png">
+                <img src="img/SibGUTI.png">
+            </div>
+            <div class="org-placeholder">
+        </div>
+    </div>
+
+    <!-- скрипт для имитации кликов -->
+    <script>
+        (function() {
+            const buttons = document.querySelectorAll('.slavic-btn');
+            const actions = ['камера', 'вѣсти', 'ключь', 'anydesk'];
+
+            buttons.forEach((btn, idx) => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    console.log(`[ИЗБУШКА] Призывъ: ${actions[idx]}`);
+                    // анимация нажатия
+                    btn.style.transform = 'translateY(7px)';
+                    btn.style.boxShadow = '0 3px 0 #4c351b, 0 12px 18px #00000080, inset 0 -3px 5px #caa76d';
+                    setTimeout(() => {
+                        btn.style.transform = '';
+                        btn.style.boxShadow = '';
+                    }, 150);
+                });
+
+                btn.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        btn.click();
+                    }
+                });
+            });
+        })();
+    </script>
+</body>
+</html>
