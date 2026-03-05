@@ -1,6 +1,6 @@
 izbushka_project_8_1\stm32f4xx_hal_dma.o: ../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dma.c
 izbushka_project_8_1\stm32f4xx_hal_dma.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h
-izbushka_project_8_1\stm32f4xx_hal_dma.o: ..\Core\Inc\stm32f4xx_hal_conf.h
+izbushka_project_8_1\stm32f4xx_hal_dma.o: ../Core/Inc/stm32f4xx_hal_conf.h
 izbushka_project_8_1\stm32f4xx_hal_dma.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rcc.h
 izbushka_project_8_1\stm32f4xx_hal_dma.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_def.h
 izbushka_project_8_1\stm32f4xx_hal_dma.o: ../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f4xx.h

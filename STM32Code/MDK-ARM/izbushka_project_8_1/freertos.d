@@ -2,7 +2,7 @@ izbushka_project_8_1\freertos.o: ../Core/Src/freertos.c
 izbushka_project_8_1\freertos.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/FreeRTOS.h
 izbushka_project_8_1\freertos.o: C:\Keil\ARM\ARMCC\bin\..\include\stddef.h
 izbushka_project_8_1\freertos.o: C:\Keil\ARM\ARMCC\bin\..\include\stdint.h
-izbushka_project_8_1\freertos.o: ..\Core\Inc\FreeRTOSConfig.h
+izbushka_project_8_1\freertos.o: ../Core/Inc/FreeRTOSConfig.h
 izbushka_project_8_1\freertos.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/projdefs.h
 izbushka_project_8_1\freertos.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/portable.h
 izbushka_project_8_1\freertos.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/deprecated_definitions.h
@@ -10,9 +10,9 @@ izbushka_project_8_1\freertos.o: ../Middlewares/Third_Party/FreeRTOS/Source/port
 izbushka_project_8_1\freertos.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/mpu_wrappers.h
 izbushka_project_8_1\freertos.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/task.h
 izbushka_project_8_1\freertos.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/list.h
-izbushka_project_8_1\freertos.o: ..\Core\Inc\main.h
+izbushka_project_8_1\freertos.o: ../Core/Inc/main.h
 izbushka_project_8_1\freertos.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h
-izbushka_project_8_1\freertos.o: ..\Core\Inc\stm32f4xx_hal_conf.h
+izbushka_project_8_1\freertos.o: ../Core/Inc/stm32f4xx_hal_conf.h
 izbushka_project_8_1\freertos.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rcc.h
 izbushka_project_8_1\freertos.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_def.h
 izbushka_project_8_1\freertos.o: ../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f4xx.h

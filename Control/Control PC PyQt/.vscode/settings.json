@@ -1,0 +1,15 @@
+{
+    "sqltools.connections": [
+        {
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "localhost",
+            "port": 5432,
+            "driver": "PostgreSQL",
+            "name": "billing_db",
+            "database": "billing_database",
+            "username": "billing_user",
+            "password": "billing_password"
+        }
+    ]
+}

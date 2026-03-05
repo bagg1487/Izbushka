@@ -197,28 +197,28 @@ const osEventFlagsAttr_t myEvent01_attributes = {
 
     #define gyroMemorySize 5
 
-    // Структура ПИД-регулятора
+    // ????????? ???-??????????
     typedef struct {
-        float Kp;           // Пропорциональный коэффициент
-        float Ki;           // Интегральный коэффициент
-        float Kd;           // Дифференциальный коэффициент
-        float error;        // Текущая ошибка
-        float prev_error;   // Предыдущая ошибка
-        float integral;     // Интегральная сумма
-        float derivative;   // Производная
-        float output;       // Выходной сигнал
-        float setpoint;     // Заданное значение (целевая скорость)
-        float actual;       // Текущее значение (текущая скорость)
-        float dt;           // Время между обновлениями
-        float max_integral; // Ограничение интегральной составляющей
-        float max_output;   // Ограничение выходного сигнала
+        float Kp;           // ???????????????? ???????????
+        float Ki;           // ???????????? ???????????
+        float Kd;           // ???????????????? ???????????
+        float error;        // ??????? ??????
+        float prev_error;   // ?????????? ??????
+        float integral;     // ???????????? ?????
+        float derivative;   // ???????????
+        float output;       // ???????? ??????
+        float setpoint;     // ???????? ???????? (??????? ????????)
+        float actual;       // ??????? ???????? (??????? ????????)
+        float dt;           // ????? ????? ????????????
+        float max_integral; // ??????????? ???????????? ????????????
+        float max_output;   // ??????????? ????????? ???????
     } PID_Controller;
 
-    // ПИД-регуляторы для каждого мотора
+    // ???-?????????? ??? ??????? ??????
     PID_Controller pid_motor1 = {0};
     PID_Controller pid_motor2 = {0};
 
-    // Переменные для измерения скорости
+    // ?????????? ??? ????????? ????????
     volatile uint32_t encoder1_count = 0;
     volatile uint32_t encoder2_count = 0;
     uint32_t prev_encoder1_count = 0;
@@ -228,9 +228,9 @@ const osEventFlagsAttr_t myEvent01_attributes = {
     uint32_t last_speed_calc_time = 0;
     uint32_t last_pid_update = 0;
 
-    // Целевые скорости (можно настраивать через UART)
-    float target_speed1 = 400.0f;  // Целевое ШИМ значение для мотора 1
-    float target_speed2 = 700.0f;  // Целевое ШИМ значение для мотора 2
+    // ??????? ???????? (????? ??????????? ????? UART)
+    float target_speed1 = 400.0f;  // ??????? ??? ???????? ??? ?????? 1
+    float target_speed2 = 700.0f;  // ??????? ??? ???????? ??? ?????? 2
 
     MPU6050_t LeftLegGyroData, RightLegGyroData, BodyGyroData;
     /* Motor structure initialization */
@@ -390,7 +390,7 @@ void StartHandServoControlTask(void *argument);
 void StartMotorControlTask(void *argument);
 
 /* USER CODE BEGIN PFP */
-    // Функции ПИД-регулятора
+    // ??????? ???-??????????
     void PID_Init(PID_Controller* pid, float Kp, float Ki, float Kd, float dt, float max_output) {
         pid->Kp = Kp;
         pid->Ki = Ki;
@@ -403,50 +403,50 @@ void StartMotorControlTask(void *argument);
         pid->output = 0;
         pid->setpoint = 0;
         pid->actual = 0;
-        pid->max_integral = max_output * 2; // Ограничение интеграла
+        pid->max_integral = max_output * 2; // ??????????? ?????????
         pid->max_output = max_output;
     }
 
-    // Обновление ПИД-регулятора
+    // ?????????? ???-??????????
     float PID_Update(PID_Controller* pid, float setpoint, float actual) {
         pid->setpoint = setpoint;
         pid->actual = actual;
         
-        // Вычисление ошибки
+        // ?????????? ??????
         pid->error = pid->setpoint - pid->actual;
         
-        // Интегральная составляющая (с насыщением)
+        // ???????????? ???????????? (? ??????????)
         pid->integral += pid->error * pid->dt;
         
-        // Антивиндп (ограничение интеграла)
+        // ????????? (??????????? ?????????)
         if (pid->integral > pid->max_integral) {
             pid->integral = pid->max_integral;
         } else if (pid->integral < -pid->max_integral) {
             pid->integral = -pid->max_integral;
         }
         
-        // Дифференциальная составляющая
+        // ???????????????? ????????????
         pid->derivative = (pid->error - pid->prev_error) / pid->dt;
         
-        // Вычисление выходного сигнала
+        // ?????????? ????????? ???????
         pid->output = (pid->Kp * pid->error) + 
                       (pid->Ki * pid->integral) + 
                       (pid->Kd * pid->derivative);
         
-        // Ограничение выходного сигнала
+        // ??????????? ????????? ???????
         if (pid->output > pid->max_output) {
             pid->output = pid->max_output;
         } else if (pid->output < -pid->max_output) {
             pid->output = -pid->max_output;
         }
         
-        // Сохранение ошибки для следующей итерации
+        // ?????????? ?????? ??? ????????? ????????
         pid->prev_error = pid->error;
         
         return pid->output;
     }
 
-    // Сброс интегральной составляющей
+    // ????? ???????????? ????????????
     void PID_Reset(PID_Controller* pid) {
         pid->integral = 0;
         pid->prev_error = 0;
@@ -454,14 +454,13 @@ void StartMotorControlTask(void *argument);
         pid->output = 0;
     }
 
-    // Упрощенное управление двигателем с ПИД (без энкодеров)
+    // ?????????? ?????????? ?????????? ? ??? (??? ?????????)
     void L298N_move_PID(Motor motor, int dir, float target_pwm, PID_Controller* pid, float current_pwm) {
-        // Установить направление
+        // ?????????? ???????????
         switch(dir) {
             case -1:
                 HAL_GPIO_WritePin(motor.GPIO_Port1, motor.GPIO_Pin1, 1);
                 HAL_GPIO_WritePin(motor.GPIO_Port2, motor.GPIO_Pin2, 0);
-                target_pwm = -target_pwm; // Скорость отрицательная для обратного направления
                 break;
             case 1:
                 HAL_GPIO_WritePin(motor.GPIO_Port1, motor.GPIO_Pin1, 0);
@@ -475,17 +474,17 @@ void StartMotorControlTask(void *argument);
                 return;
         }
         
-        // Обновить ПИД и получить выходное ШИМ значение
+        // ???????? ??? ? ???????? ???????? ??? ????????
         float pid_output = PID_Update(pid, target_pwm, current_pwm);
         
-        // Преобразование в абсолютное значение ШИМ
+        // ?????????????? ? ?????????? ???????? ???
         int pwm_value = (int)fabs(pid_output);
         
-        // Ограничение ШИМ (максимум 1500, так как период таймера 1500)
+        // ??????????? ??? (???????? 1500, ??? ??? ?????? ??????? 1500)
         if (pwm_value > 1500) pwm_value = 1500;
         if (pwm_value < 0) pwm_value = 0;
         
-        // Установка ШИМ
+        // ????????? ???
         __HAL_TIM_SET_COMPARE(motor.htim, motor.channel, pwm_value);
     }
 
@@ -538,7 +537,7 @@ void StartMotorControlTask(void *argument);
         return result; 
     }
 
-    // Функция посылки триггер-импульса
+    // ??????? ??????? ???????-????????
     void HCSR04_Trigger()
     {
             HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_SET); // TRIG - PA0
@@ -559,7 +558,7 @@ void StartMotorControlTask(void *argument);
             dist = distance;
             int smoke_sensor=0;
             int touch_sensor = 0;
-                    // Выводим значение в UART
+                    // ??????? ???????? ? UART
             sprintf(msg, "CMD_SENSORS#%d#%d#%d#%d#%.2f#%d#%d\n",(uint8_t)dht_data.temp, (uint8_t)dht_data.hum, reedModule,light,dist,smoke_sensor,touch_sensor);
             return msg;
     }
@@ -772,7 +771,7 @@ void StartMotorControlTask(void *argument);
     ----------------------------------------------------------------------------------------*/
     double accelCalc(double accelRaw){
         double acceX = constrain(accelRaw, -16384, 16384)/ 16384.0;    // limit +-1g
-        double accel = acceX*9.82 ;           // convert в +-1.0
+        double accel = acceX*9.82 ;           // convert ? +-1.0
         return accel;
 
     }
@@ -2001,7 +2000,7 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-    // Callback Input Capture для TIM3 Channel 1
+    // Callback Input Capture ??? TIM3 Channel 1
     void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
     {
             if (htim->Instance == TIM3 && htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1)
@@ -2271,7 +2270,7 @@ void StartServoControlTask(void *argument)
                 }    
                 case 9: {
                     
-                /*----------------loading default values ​​from the server via UART when the hut starts working----------------------------*/
+                /*----------------loading default values ??from the server via UART when the hut starts working----------------------------*/
                     osMutexAcquire(UARTDataMutexHandle, osWaitForever);
                     leftLeg.calibrationAngle.A =
                     calibrationAngles[0];
@@ -2751,7 +2750,7 @@ void StartHandServoControlTask(void *argument)
                         allServoHandSpin(pca9685_hand,400,leftHand.calibrationAngle, rightHand.calibrationAngle,0);
                 break;
                 case 9:
-                    /*----------------loading default values ​​from the server via UART when the hut starts working----------------------------*/
+                    /*----------------loading default values ??from the server via UART when the hut starts working----------------------------*/
                     osMutexAcquire(UARTDataMutexHandle, osWaitForever);
                     leftHand.calibrationAngle.A = calibrationAngles[10];
                     leftHand.defaultAngle.A = leftHand.calibrationAngle.A;
@@ -2839,13 +2838,13 @@ void StartMotorControlTask(void *argument)
         int timerLeft,timerRight;
         int dirLeft=-1,dirRight=-1;
         
-        // Инициализация ПИД-регуляторов
-        // Коэффициенты подбираются экспериментально
-        // Kp=2.0, Ki=0.1, Kd=0.05, dt=0.01s (обновление каждые 10ms), max_output=1500
+        // ????????????? ???-???????????
+        // ???????????? ??????????? ????????????????
+        // Kp=2.0, Ki=0.1, Kd=0.05, dt=0.01s (?????????? ?????? 10ms), max_output=1500
         PID_Init(&pid_motor1, 2.0f, 0.1f, 0.05f, 0.01f, 1500.0f);
         PID_Init(&pid_motor2, 2.0f, 0.1f, 0.05f, 0.01f, 1500.0f);
         
-        // Время последнего обновления ПИД
+        // ????? ?????????? ?????????? ???
         last_pid_update = HAL_GetTick();
         
         // Connecting motors in the caterpillars with speed control
@@ -2862,39 +2861,39 @@ void StartMotorControlTask(void *argument)
         /* Infinite loop */
         for(;;)
         {
-            // Расчет времени для ПИД
+            // ?????? ??????? ??? ???
             uint32_t current_time = HAL_GetTick();
-            float dt = (current_time - last_pid_update) / 1000.0f; // в секундах
+            float dt = (current_time - last_pid_update) / 1000.0f; // ? ????????
             
-            // Получение текущих значений ШИМ (если нужно для ПИД)
+            // ????????? ??????? ???????? ??? (???? ????? ??? ???)
             float current_pwm1 = __HAL_TIM_GET_COMPARE(&htim1, TIM_CHANNEL_2);
             float current_pwm2 = __HAL_TIM_GET_COMPARE(&htim1, TIM_CHANNEL_3);
             
-            // Обновление ПИД каждые 10ms
+            // ?????????? ??? ?????? 10ms
             if (dt >= 0.01f) {
                 last_pid_update = current_time;
                 
-                // Если состояние требует движения с ПИД-регулированием
+                // ???? ????????? ??????? ???????? ? ???-??????????????
                 if (state == 1) {
-                    // Управление с ПИД
+                    // ?????????? ? ???
                     switch(state) {
                         case 1:
-                            // ВПЕРЕД
+                            // ??????
                             if(turnLeft == 1 && turnRight == 1) {
                                 L298N_move_PID(motor1, 1, target_speed1, &pid_motor1, current_pwm1);
                                 L298N_move_PID(motor2, 1, target_speed2, &pid_motor2, current_pwm2);
                             } 
-                            // НАЗАД  
+                            // ?????  
                             else if(turnLeft == 0 && turnRight == 0) {
                                 L298N_move_PID(motor1, -1, target_speed1, &pid_motor1, current_pwm1);
                                 L298N_move_PID(motor2, -1, target_speed2, &pid_motor2, current_pwm2);
                             }
-                            // ПОВОРОТ ВЛЕВО
+                            // ??????? ?????
                             else if(turnLeft == 1 && turnRight == 0) {
                                 L298N_move_PID(motor1, -1, target_speed1, &pid_motor1, current_pwm1);
                                 L298N_move_PID(motor2, 1, target_speed2, &pid_motor2, current_pwm2);
                             }
-                            // ПОВОРОТ ВПРАВО
+                            // ??????? ??????
                             else if(turnLeft == 0 && turnRight == 1) {
                                 L298N_move_PID(motor1, 1, target_speed1, &pid_motor1, current_pwm1);
                                 L298N_move_PID(motor2, -1, target_speed2, &pid_motor2, current_pwm2);
@@ -2902,16 +2901,16 @@ void StartMotorControlTask(void *argument)
                             break;
                     }
                 } else {
-                    // Для других состояний используем обычное управление
+                    // ??? ?????? ????????? ?????????? ??????? ??????????
                     switch(state) {
                         case 4:
                             if (hold3mod == 1) {
-                                // Вращение на месте влево
+                                // ???????? ?? ????? ?????
                                 if(turnLeft == 1 && turnRight == 0) {
                                     L298N_move(motor1, 1, 400);
                                     L298N_move(motor2, -1, 700);
                                 } 
-                                // Вращение на месте вправо
+                                // ???????? ?? ????? ??????
                                 else if(turnLeft == 0 && turnRight == 1) {
                                     L298N_move(motor1, -1, 400);
                                     L298N_move(motor2, 1, 700);
@@ -2920,7 +2919,7 @@ void StartMotorControlTask(void *argument)
                             break;
 
                         case 12:
-                            // Для танца используем фиксированные значения без ПИД
+                            // ??? ????? ?????????? ????????????? ???????? ??? ???
                             osDelay(4000);
                             L298N_move(motor1, 1, 400);
                             L298N_move(motor2, -1, 700);
@@ -2939,7 +2938,7 @@ void StartMotorControlTask(void *argument)
                             break;
 
                         case 6:
-                            // Стоп - сбрасываем ПИД
+                            // ???? - ?????????? ???
                             L298N_move(motor1, 0, 0);
                             L298N_move(motor2, 0, 0);
                             PID_Reset(&pid_motor1);
@@ -2977,7 +2976,7 @@ void StartMotorControlTask(void *argument)
                     L298N_move_without_PWM(motor_hand2, 0);
             }
 
-            osDelay(10); // Задержка для ПИД-регулятора (10ms)
+            osDelay(10); // ???????? ??? ???-?????????? (10ms)
         }
   /* USER CODE END StartMotorControlTask */
 }
