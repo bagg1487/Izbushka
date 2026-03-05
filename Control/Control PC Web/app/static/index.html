@@ -361,31 +361,71 @@
 
     <!-- скрипт для имитации кликов -->
     <script>
-        (function() {
-            const buttons = document.querySelectorAll('.slavic-btn');
-            const actions = ['камера', 'вѣсти', 'ключь', 'anydesk'];
+    (function() {
+        const buttons = document.querySelectorAll('.slavic-btn');
+        const actions = ['camera', 'info', 'ssh', 'anydesk'];
 
-            buttons.forEach((btn, idx) => {
-                btn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    console.log(`[ИЗБУШКА] Призывъ: ${actions[idx]}`);
-                    // анимация нажатия
-                    btn.style.transform = 'translateY(7px)';
-                    btn.style.boxShadow = '0 3px 0 #4c351b, 0 12px 18px #00000080, inset 0 -3px 5px #caa76d';
-                    setTimeout(() => {
-                        btn.style.transform = '';
-                        btn.style.boxShadow = '';
-                    }, 150);
-                });
-
-                btn.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        btn.click();
+        buttons.forEach((btn, idx) => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const action = actions[idx];
+                console.log(`[ИЗБУШКА] Призывъ: ${action}`);
+                
+                // анимация нажатия
+                btn.style.transform = 'translateY(7px)';
+                btn.style.boxShadow = '0 3px 0 #4c351b, 0 12px 18px #00000080, inset 0 -3px 5px #caa76d';
+                
+                try {
+                    switch(action) {
+                        case 'camera':
+                            // Открываем страницу с видео
+                            window.open('/video', '_blank');
+                            break;
+                            
+                        case 'info':
+                            // Получаем инфо с бека
+                            const status = await fetch('/status').then(r => r.json());
+                            const sonic = await fetch('/api/commands/sonic', {method: 'POST'});
+                            alert(`Статус: ${status.connected ? 'Подключен' : 'Отключен'}\nIP: ${status.ip || 'нет'}`);
+                            break;
+                            
+                        case 'ssh':
+                            // Получаем SSH данные
+                            const sshData = await fetch('/api/ssh').then(r => r.json());
+                            if (sshData.status === 'ok') {
+                                alert(`SSH команда:\n${sshData.ssh_command}\n\nИмя: ${sshData.username}\nIP: ${sshData.ip}`);
+                            } else {
+                                alert('Ошибка получения SSH данных');
+                            }
+                            break;
+                            
+                        case 'anydesk':
+                            // Получаем AnyDesk ID
+                            const anyData = await fetch('/api/anydesk').then(r => r.json());
+                            if (anyData.status === 'ok') {
+                                alert(`AnyDesk ID:\n${anyData.anydesk_id}`);
+                            } else {
+                                alert('AnyDesk не найден');
+                            }
+                            break;
                     }
-                });
+                } catch (err) {
+                    alert('Ошибка связи с сервером');
+                    console.error(err);
+                }
+                
+                setTimeout(() => {
+                    btn.style.transform = '';
+                    btn.style.boxShadow = '';
+                }, 150);
             });
-        })();
-    </script>
-</body>
-</html>
+
+            btn.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    btn.click();
+                }
+            });
+        });
+    })();
+</script>
