@@ -12,7 +12,7 @@
 
 ---
 
-Перед созданием frontend необходимо ознакомиться с [приложением](https://github.com/bagg1487/Izbushka/blob/main/Control/Control%20Phone/app-debug.apk)
+Перед созданием frontend необходимо ознакомиться с [приложением](https://github.com/bagg1487/Izbushka/tree/main/Control/Control%20Phone/Organizer)
 
 Перед созданием backend необходимо ознакомиться с [сервером](https://github.com/bagg1487/Izbushka/blob/main/OpiServer/Server_final3/Server_final/Server.py), его функционалом
 
@@ -26,7 +26,7 @@
 
 | | |
 |:---:|:---:|
-| ![Фото 1](link.jpg) | ![Фото 2](link.jpg) |
+| ![Фото 1](https://github.com/Darkness1853/Pictures/blob/main/p1/photo_2026-03-06_15-03-28.jpg) | ![Фото 2](https://github.com/Darkness1853/Pictures/blob/main/p1/photo_2026-03-06_15-03-23.jpg) |
 | *CalibrationActivity* | *LivestreamActivity* |
 
 Синтаксис [Kotlin](https://telecomdep.github.io/notes/Android/Kotlin/kotlin.html)
