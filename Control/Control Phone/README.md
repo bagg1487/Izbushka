@@ -29,6 +29,8 @@
 | ![Фото 1](https://github.com/Darkness1853/Pictures/blob/main/p1/photo_2026-03-06_15-03-28.jpg) | ![Фото 2](https://github.com/Darkness1853/Pictures/blob/main/p1/photo_2026-03-06_15-03-23.jpg) |
 | *CalibrationActivity* | *LivestreamActivity* |
 
+CalibrationActivity и LivestreamActivity работают лишь при подключении к избушке
+
 Синтаксис [Kotlin](https://telecomdep.github.io/notes/Android/Kotlin/kotlin.html)
 
 Работа с Android Studio
