@@ -1,5 +1,5 @@
 # Сервер на orange pi
-Новейшая версия [сервера](https://github.com/bagg1487/Izbushka/tree/main/OpiServer/Server_final12%20(copy%201)/Server_final) 
+Новейшая версия [сервера](https://github.com/bagg1487/Izbushka/tree/main/OpiServer/server_final_new/Server_final) 
 Нет файлов с апишкой (находится на локальном устройстве)
 Файлы с апишкой:
 - yandexGPT_API.py
