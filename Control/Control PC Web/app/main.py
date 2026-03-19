@@ -237,7 +237,21 @@ async def serve_control():
     control_path = os.path.join("app", "static", "control.html")
     if os.path.exists(control_path):
         return FileResponse(control_path)
-    return {"error": "control.html not found"}    
+    return {"error": "control.html not found"}  
+
+@app.get("/info")
+async def serve_info():
+    info_path = os.path.join("app", "static", "info.html")
+    if os.path.exists(info_path):
+        return FileResponse(info_path)
+    return {"error": "info.html not found"}
+
+@app.get("/ssh")
+async def serve_ssh():
+    ssh_path = os.path.join("app", "static", "ssh.html")
+    if os.path.exists(ssh_path):
+        return FileResponse(ssh_path)
+    return {"error": "ssh.html not found"}
 
 @app.websocket("/ws/video")
 async def video_stream(websocket: WebSocket):

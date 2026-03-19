@@ -80,7 +80,7 @@ async def function(num: int):
     }
     
     if num in func_map:
-        robot.send_command(f"{func_map[num]}\n")
+        robot.send_command(f"{func_map[num]}")
         return {"status": "ok"}
     
     raise HTTPException(400, "Invalid function")
@@ -89,14 +89,15 @@ async def function(num: int):
 async def look_stop():
     robot = robot_manager.get_robot()
     if robot and robot.connected:
-        robot.send_command(f"{cmd.CMD_LOOK_STOP}\n")
+        robot.send_command(f"{cmd.CMD_LOOK_STOP}")
     return {"status": "ok"}
 
 @router.post("/sonic")
 async def sonic():
     robot = robot_manager.get_robot()
     if robot and robot.connected:
-        robot.send_command(f"{cmd.CMD_SONIC}\n")
+        robot.send_command(f"{cmd.CMD_SONIC}")
+        return {"status": "ok", "sonic": robot.get_sonic()}
     return {"status": "ok"}
 
 @router.post("/video/toggle")
@@ -104,28 +105,19 @@ async def video_toggle(state: bool):
     robot = robot_manager.get_robot()
     if robot and robot.connected:
         val = "1" if state else "0"
-        robot.send_command(f"{cmd.CMD_VIDEO}#{val}\n")
+        robot.send_command(f"{cmd.CMD_VIDEO}#{val}")
     return {"status": "ok"}
 
 @router.post("/menu")
 async def menu():
     robot = robot_manager.get_robot()
     if robot and robot.connected:
-        robot.send_command(f"{cmd.CMD_MENU}\n")
+        robot.send_command(f"{cmd.CMD_MENU}")
     return {"status": "ok"}
 
-@router.post("/sonic")
-async def sonic():
-    robot = robot_manager.get_robot()
-    if robot and robot.connected:
-        robot.send_command(f"{cmd.CMD_SONIC}\n")
-        # Возвращаем значение сонара
-        return {"status": "ok", "sonic": robot.get_sonic()}
-    return {"status": "ok"}
-    
 @router.post("/about/{num}")
 async def about(num: int):
     robot = robot_manager.get_robot()
     if robot and robot.connected:
-        robot.send_command(f"{cmd.CMD_FUNC_ABOUT}#{num}\n")
+        robot.send_command(f"{cmd.CMD_FUNC_ABOUT}#{num}")
     return {"status": "ok"}

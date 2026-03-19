@@ -18,7 +18,7 @@
         }
         
         .control-panel {
-            max-width: 600px;
+            max-width: 900px;
             width: 100%;
             background: #efdebc;
             border-radius: 60px;
@@ -35,11 +35,29 @@
             margin-bottom: 30px;
         }
         
+        .video-container {
+            width: 100%;
+            background: #000;
+            border-radius: 30px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            border: 3px solid #ab7a41;
+        }
+        
+        #videoFeed {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
         .joystick {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 15px;
             margin: 30px 0;
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
         }
         
         .ctrl-btn {
@@ -83,6 +101,23 @@
             color: #ffaaaa;
         }
         
+        .wasd-hint {
+            text-align: center;
+            margin: 20px 0;
+            padding: 15px;
+            background: #8b693f;
+            border-radius: 30px;
+            color: white;
+            font-size: 1.5rem;
+            letter-spacing: 10px;
+            border: 2px solid #ecca90;
+        }
+        
+        .wasd-hint i {
+            margin: 0 10px;
+            color: #ffefc8;
+        }
+        
         .back-btn {
             display: block;
             text-align: center;
@@ -101,46 +136,76 @@
             Статус: <span id="statusText" class="disconnected">Не подключен</span>
         </div>
         
+        <div class="video-container">
+            <img id="videoFeed" src="" alt="Video Stream">
+        </div>
+        
+        <div class="wasd-hint">
+            <i class="fas fa-arrow-up"></i> W 
+            <i class="fas fa-arrow-left"></i> A 
+            <i class="fas fa-arrow-down"></i> S 
+            <i class="fas fa-arrow-right"></i> D
+        </div>
+        
         <div class="joystick">
             <div></div>
-            <div class="ctrl-btn" onclick="move('forward')"><i class="fas fa-arrow-up"></i></div>
+            <div class="ctrl-btn" onclick="move('forward')" id="btn-forward"><i class="fas fa-arrow-up"></i><br><small>W</small></div>
             <div></div>
-            <div class="ctrl-btn" onclick="move('left')"><i class="fas fa-arrow-left"></i></div>
-            <div class="ctrl-btn" onclick="move('stop')"><i class="fas fa-stop"></i></div>
-            <div class="ctrl-btn" onclick="move('right')"><i class="fas fa-arrow-right"></i></div>
+            <div class="ctrl-btn" onclick="move('left')" id="btn-left"><i class="fas fa-arrow-left"></i><br><small>A</small></div>
+            <div class="ctrl-btn" onclick="move('stop')" id="btn-stop"><i class="fas fa-stop"></i><br><small>Space</small></div>
+            <div class="ctrl-btn" onclick="move('right')" id="btn-right"><i class="fas fa-arrow-right"></i><br><small>D</small></div>
             <div></div>
-            <div class="ctrl-btn" onclick="move('backward')"><i class="fas fa-arrow-down"></i></div>
+            <div class="ctrl-btn" onclick="move('backward')" id="btn-backward"><i class="fas fa-arrow-down"></i><br><small>S</small></div>
             <div></div>
         </div>
         
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px;">
             <div class="ctrl-btn" onclick="handsUp()"><i class="fas fa-hand-paper"></i> Руки</div>
-            <div class="ctrl-btn" onclick="toggleVideo()"><i class="fas fa-video"></i> Видео</div>
             <div class="ctrl-btn" onclick="musicPlay()"><i class="fas fa-music"></i> Музыка</div>
-            <div class="ctrl-btn" onclick="musicStop()"><i class="fas fa-stop-circle"></i> Стоп</div>
         </div>
         
         <a href="/" class="back-btn">← Вернуться в избушку</a>
     </div>
     
     <script>
+        // WebSocket для видео
+        const ws = new WebSocket(`ws://${location.host}/ws/video`);
+        const videoFeed = document.getElementById('videoFeed');
+        const statusDiv = document.getElementById('statusText');
+        
+        ws.onopen = () => {
+            console.log('Video WebSocket connected');
+        };
+        
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === 'video') {
+                videoFeed.src = 'data:image/jpeg;base64,' + data.data;
+            }
+        };
+        
+        ws.onerror = (e) => {
+            console.error('Video WebSocket error:', e);
+        };
+        
+        // Статус подключения
         async function checkStatus() {
             try {
                 const res = await fetch('/status');
                 const data = await res.json();
-                const statusSpan = document.getElementById('statusText');
                 if (data.connected) {
-                    statusSpan.textContent = `Подключен к ${data.ip}`;
-                    statusSpan.className = 'connected';
+                    statusDiv.textContent = `Подключен к ${data.ip}`;
+                    statusDiv.className = 'connected';
                 } else {
-                    statusSpan.textContent = 'Не подключен';
-                    statusSpan.className = 'disconnected';
+                    statusDiv.textContent = 'Не подключен';
+                    statusDiv.className = 'disconnected';
                 }
             } catch (e) {
                 console.error(e);
             }
         }
         
+        // Движение
         async function move(dir) {
             try {
                 await fetch(`/commands/move/${dir}`, {
@@ -149,7 +214,7 @@
                     body: JSON.stringify({speed: 50})
                 });
             } catch (e) {
-                alert('Робот не подключен');
+                console.error(e);
             }
         }
         
@@ -157,7 +222,7 @@
             try {
                 await fetch('/commands/hands', {method: 'POST'});
             } catch (e) {
-                alert('Робот не подключен');
+                console.error(e);
             }
         }
         
@@ -165,29 +230,78 @@
             try {
                 await fetch('/commands/music/play', {method: 'POST'});
             } catch (e) {
-                alert('Робот не подключен');
+                console.error(e);
             }
         }
         
-        async function musicStop() {
-            try {
-                await fetch('/commands/music/stop', {method: 'POST'});
-            } catch (e) {
-                alert('Робот не подключен');
-            }
-        }
+        // Управление с клавиатуры
+        let activeKeys = new Set();
         
-        async function toggleVideo() {
-            try {
-                await fetch('/commands/video/toggle?state=true', {method: 'POST'});
-                window.open('/video', '_blank');
-            } catch (e) {
-                alert('Робот не подключен');
+        document.addEventListener('keydown', (e) => {
+            const key = e.key.toLowerCase();
+            e.preventDefault();
+            
+            if (activeKeys.has(key)) return;
+            activeKeys.add(key);
+            
+            switch(key) {
+                case 'w':
+                    move('forward');
+                    document.getElementById('btn-forward').style.transform = 'translateY(8px)';
+                    break;
+                case 'a':
+                    move('left');
+                    document.getElementById('btn-left').style.transform = 'translateY(8px)';
+                    break;
+                case 's':
+                    move('backward');
+                    document.getElementById('btn-backward').style.transform = 'translateY(8px)';
+                    break;
+                case 'd':
+                    move('right');
+                    document.getElementById('btn-right').style.transform = 'translateY(8px)';
+                    break;
+                case ' ':
+                case 'space':
+                    move('stop');
+                    document.getElementById('btn-stop').style.transform = 'translateY(8px)';
+                    break;
             }
-        }
+        });
         
+        document.addEventListener('keyup', (e) => {
+            const key = e.key.toLowerCase();
+            activeKeys.delete(key);
+            
+            if (['w', 'a', 's', 'd'].includes(key)) {
+                move('stop');
+            }
+            
+            // Сброс визуального эффекта
+            document.getElementById('btn-forward').style.transform = '';
+            document.getElementById('btn-left').style.transform = '';
+            document.getElementById('btn-backward').style.transform = '';
+            document.getElementById('btn-right').style.transform = '';
+            document.getElementById('btn-stop').style.transform = '';
+        });
+        
+        // Запуск
         checkStatus();
         setInterval(checkStatus, 2000);
+
+        let touchstartX = 0;
+        let touchendX = 0;
+
+        document.addEventListener('touchstart', e => {
+            touchstartX = e.changedTouches[0].screenX;
+        });
+
+        document.addEventListener('touchend', e => {
+            touchendX = e.changedTouches[0].screenX;
+            if (touchendX > touchstartX + 50) {  // Свайп влево
+                window.location.href = '/';
+            }
+        });
     </script>
 </body>
 </html>

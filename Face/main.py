@@ -6,9 +6,11 @@ import queue
 import cv2
 import numpy as np
 import json
+import os
+from contextlib import asynccontextmanager
 
 from fastapi.responses import FileResponse, StreamingResponse
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -17,9 +19,24 @@ import uvicorn
 
 from reaction import get_random_expression
 
-app = FastAPI()
+# ==================== LIFESPAN (ВМЕСТО on_event) ====================
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # STARTUP - выполняется при запуске
+    global streaming_active  # ← GLOBAL ВНУТРИ ФУНКЦИИ
+    streaming_active = True
+    capture_thread = threading.Thread(target=video_capture_worker, daemon=True)
+    capture_thread.start()
+    print("✅ Запущен поток захвата видео")
+    
+    yield  # Тут работает приложение
+    streaming_active = False
+    print("🛑 Остановлен поток захвата видео")
 
-# Добавляем CORS middleware для работы с WebSocket
+# ==================== СОЗДАНИЕ APP ====================
+app = FastAPI(lifespan=lifespan)
+
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -28,14 +45,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Глобальные переменные для видеопотока
+# ==================== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ====================
 frame_queue = queue.Queue(maxsize=2)
 latest_frame = None
 frame_lock = threading.Lock()
 streaming_active = False
 current_expression = "neutral"
 
-
+# ==================== МЕНЕДЖЕР WEBSOCKET ====================
 class ConnectionManager:
     def __init__(self):
         self.active_connections = []
@@ -62,28 +79,9 @@ class ConnectionManager:
             except:
                 self.disconnect(connection)
 
-
 manager = ConnectionManager()
 
-
-@app.on_event("startup")
-async def startup_event():
-    """Запуск потока захвата видео при старте приложения"""
-    global streaming_active
-    streaming_active = True
-    capture_thread = threading.Thread(target=video_capture_worker, daemon=True)
-    capture_thread.start()
-    print("Запущен поток захвата видео")
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Остановка потока захвата видео при завершении приложения"""
-    global streaming_active
-    streaming_active = False
-    print("Остановлен поток захвата видео")
-
-
+# ==================== ВИДЕО ПОТОК ====================
 def video_capture_worker():
     """Рабочий поток для захвата видео с камеры"""
     global latest_frame, streaming_active
@@ -98,14 +96,14 @@ def video_capture_worker():
             cap.set(cv2.CAP_PROP_FPS, 30)
 
             if cap.isOpened():
-                print(f"Камера найдена на индексе {camera_index}")
+                print(f"📷 Камера найдена на индексе {camera_index}")
                 break
         except:
             if cap:
                 cap.release()
 
     if cap is None or not cap.isOpened():
-        print("Не удалось открыть камеру")
+        print("⚠️ Не удалось открыть камеру, использую тестовое изображение")
         # Создаем тестовое изображение для демонстрации
         test_frame = np.zeros((480, 640, 3), dtype=np.uint8)
         cv2.putText(test_frame, "КАМЕРА НЕ НАЙДЕНА", (50, 240),
@@ -135,12 +133,11 @@ def video_capture_worker():
             else:
                 time.sleep(0.01)
         except Exception as e:
-            print(f"Ошибка захвата видео: {e}")
+            print(f"❌ Ошибка захвата видео: {e}")
             time.sleep(0.1)
 
     cap.release()
-    print("Поток захвата видео завершен")
-
+    print("📹 Поток захвата видео завершен")
 
 def get_latest_frame():
     """Получение последнего кадра с блокировкой"""
@@ -149,13 +146,88 @@ def get_latest_frame():
             return latest_frame.copy()
     return None
 
-
 def update_frame_for_streaming(frame):
     """Обновление кадра для трансляции"""
     with frame_lock:
         global latest_frame
         latest_frame = frame
 
+# ==================== HTTP МАРШРУТЫ ====================
+@app.get("/")
+async def read_index():
+    return FileResponse("templates/face.html")
+
+@app.get("/casino")
+async def read_casino():
+    return FileResponse("templates/casino.html")
+
+@app.get("/control")
+async def read_control():
+    return FileResponse("templates/control.html")
+
+@app.get("/diagnostics")
+async def read_diagnostics():
+    return FileResponse("templates/diagnostics.html")
+
+@app.get("/drawing")
+async def read_drawing():
+    return FileResponse("templates/drawing.html")
+
+# ===== ВАЖНО: ОБРАБОТЧИК PNG =====
+@app.get("/{filename}.png")
+async def get_png(filename: str):
+    """Обслуживание PNG файлов для казино"""
+    if filename in ["1", "2", "3", "4", "5", "6", "7"]:
+        file_path = f"templates/{filename}.png"
+        if os.path.exists(file_path):
+            return FileResponse(file_path)
+    raise HTTPException(status_code=404, detail="PNG not found")
+
+@app.get("/current-expression")
+async def get_current_expression():
+    return {"expression": current_expression}
+
+# ==================== ВИДЕО ПОТОК ДЛЯ БРАУЗЕРА ====================
+@app.get("/video_feed")
+async def video_feed():
+    """Потоковое видео с камеры для веб-интерфейса"""
+
+    async def generate_frames():
+        while True:
+            frame = get_latest_frame()
+            if frame is not None:
+                # Конвертируем BGR в RGB для веб-отображения
+                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                ret, buffer = cv2.imencode('.jpg', frame_rgb, [cv2.IMWRITE_JPEG_QUALITY, 70])
+                if ret:
+                    yield (b'--frame\r\n'
+                           b'Content-Type: image/jpeg\r\n\r\n' +
+                           buffer.tobytes() + b'\r\n')
+            else:
+                # Если кадра нет, создаем черный кадр
+                blank_frame = np.zeros((480, 640, 3), dtype=np.uint8)
+                ret, buffer = cv2.imencode('.jpg', blank_frame, [cv2.IMWRITE_JPEG_QUALITY, 70])
+                if ret:
+                    yield (b'--frame\r\n'
+                           b'Content-Type: image/jpeg\r\n\r\n' +
+                           buffer.tobytes() + b'\r\n')
+
+            await asyncio.sleep(0.033)  # ~30 FPS
+
+    return StreamingResponse(
+        generate_frames(),
+        media_type="multipart/x-mixed-replace; boundary=frame"
+    )
+
+# ==================== WEBSOCKET ====================
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
 
 @app.websocket("/ws/diagnostics")
 async def diagnostics_websocket(websocket: WebSocket):
@@ -182,45 +254,14 @@ async def diagnostics_websocket(websocket: WebSocket):
     except Exception as e:
         print(f"WebSocket error: {e}")
 
-@app.get("/")
-async def read_index():
-    return FileResponse("templates/face.html")
-
-@app.get("/casino")
-async def read_casino():
-    return FileResponse("templates/casino.html")
-
-@app.get("/control")
-async def read_control():
-    return FileResponse("templates/control.html")
-
-@app.get("/diagnostics")
-async def read_diagnostics():
-    return FileResponse("templates/diagnostics.html")
-
-@app.get("/drawing")
-async def read_drawing():
-    return FileResponse("templates/drawing.html")
-
-@app.get("/current-expression")
-async def get_current_expression():
-    return {"expression": current_expression}
-
-@app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-    await manager.connect(websocket)
-    try:
-        while True:
-            await websocket.receive_text()
-    except WebSocketDisconnect:
-        manager.disconnect(websocket)
-
+# ==================== МОДЕЛИ ====================
 class FaceExpression(BaseModel):
     expression: str
 
 class TextCommand(BaseModel):
     command: str
 
+# ==================== POST МАРШРУТЫ ====================
 @app.post("/change-expression")
 async def change_expression(data: FaceExpression):
     global current_expression
@@ -252,7 +293,6 @@ async def start_drawing():
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
-
 @app.post("/drawing/stop")
 async def stop_drawing():
     """Остановка режима рисования"""
@@ -269,7 +309,6 @@ async def stop_drawing():
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
-
 @app.get("/drawing/status")
 async def get_drawing_status():
     """Получение статуса рисования"""
@@ -278,38 +317,6 @@ async def get_drawing_status():
         return camera.get_drawing_status()
     except:
         return {"active": False}
-
-
-@app.get("/video_feed")
-async def video_feed():
-    """Потоковое видео с камеры для веб-интерфейса"""
-
-    async def generate_frames():
-        while True:
-            frame = get_latest_frame()
-            if frame is not None:
-                # Конвертируем BGR в RGB для веб-отображения
-                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                ret, buffer = cv2.imencode('.jpg', frame_rgb, [cv2.IMWRITE_JPEG_QUALITY, 70])
-                if ret:
-                    yield (b'--frame\r\n'
-                           b'Content-Type: image/jpeg\r\n\r\n' +
-                           buffer.tobytes() + b'\r\n')
-            else:
-                # Если кадра нет, создаем черный кадр
-                blank_frame = np.zeros((480, 640, 3), dtype=np.uint8)
-                ret, buffer = cv2.imencode('.jpg', blank_frame, [cv2.IMWRITE_JPEG_QUALITY, 70])
-                if ret:
-                    yield (b'--frame\r\n'
-                           b'Content-Type: image/jpeg\r\n\r\n' +
-                           buffer.tobytes() + b'\r\n')
-
-            await asyncio.sleep(0.033)  # ~30 FPS
-
-    return StreamingResponse(
-        generate_frames(),
-        media_type="multipart/x-mixed-replace; boundary=frame"
-    )
 
 @app.post("/text-command")
 async def text_command(data: TextCommand):
@@ -369,16 +376,26 @@ async def text_command(data: TextCommand):
 
     return {"status": "error", "message": "Неизвестная команда"}
 
+# ==================== ГОЛОСОВОЙ ПРОЦЕССОР ====================
 def start_voice_processor():
-    from audio import VoiceProcessor
-    vp = VoiceProcessor()
-    vp.listen()
+    try:
+        from audio import VoiceProcessor
+        vp = VoiceProcessor()
+        vp.listen()
+    except Exception as e:
+        print(f"⚠️ Голосовой процессор не запущен: {e}")
     while True:
         time.sleep(1)
 
-
+# ==================== ЗАПУСК ====================
 if __name__ == "__main__":
-
-    voice_thread = threading.Thread(target=start_voice_processor, daemon=True)
-    voice_thread.start()
+    # Запускаем голосовой поток (если не сломается - норм)
+    try:
+        voice_thread = threading.Thread(target=start_voice_processor, daemon=True)
+        voice_thread.start()
+    except:
+        print("⚠️ Голосовой поток не запущен, но это не критично")
+    
+    # Запускаем сервер
+    print("🚀 Сервер запускается на http://127.0.0.1:8000")
     uvicorn.run(app, host="127.0.0.1", port=8000)

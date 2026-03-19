@@ -111,7 +111,7 @@
 
         .button-grid {
             display: grid;
-            grid-template-columns: repeat(5, 1fr);
+            grid-template-columns: repeat(4, 1fr);
             gap: 20px;
             padding: 20px 5px 10px 5px;
         }
@@ -278,23 +278,19 @@
         <div class="button-grid">
             <div class="slavic-btn" role="button" tabindex="0" data-action="camera">
                 <i class="fas fa-camera-retro"></i>
-                <span class="btn-label">камера</span>
+                <span class="btn-label">Светопись</span>
             </div>
             <div class="slavic-btn" role="button" tabindex="0" data-action="control">
                 <i class="fas fa-gamepad"></i>
-                <span class="btn-label">управление</span>
+                <span class="btn-label">Правлѣниѥ</span>
             </div>
-            <div class="slavic-btn" role="button" tabindex="0" data-action="robotinfo">
+            <div class="slavic-btn" role="button" tabindex="0" data-action="info">
                 <i class="fas fa-robot"></i>
                 <span class="btn-label">вѣсти</span>
             </div>
             <div class="slavic-btn" role="button" tabindex="0" data-action="ssh">
                 <i class="fas fa-key"></i>
                 <span class="btn-label">ключь</span>
-            </div>
-            <div class="slavic-btn" role="button" tabindex="0" data-action="anydesk">
-                <i class="fas fa-tower-broadcast"></i>
-                <span class="btn-label">anydesk</span>
             </div>
         </div>
 
@@ -311,7 +307,6 @@
         <div class="org-footer">
             <div class="org-logo">
                 <img src="/static/img/YADRO--1024X1024.png" alt="YADRO">
-                <img src="/static/img/SibGUTI.png" alt="SibGUTI">
             </div>
         </div>
     </div>
@@ -328,7 +323,7 @@
                 const res = await fetch('/connect', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ip: ip})  // <-- отправляем объект {ip: "..."}
+                    body: JSON.stringify({ip: ip})  
                 });
                 const data = await res.json();
                 alert(data.status === 'connected' ? 'Подключено к роботу!' : 'Ошибка подключения');
@@ -369,27 +364,15 @@
                             window.open('/control', '_blank');
                             break;
                             
-                        case 'robotinfo':
-                            await getRobotInfo();
+                        case 'info':
+                            window.open('/info', '_blank');
                             break;
-                            
+                                                    
                         case 'ssh':
-                            const sshData = await fetch('/api/ssh').then(r => r.json());
-                            if (sshData.status === 'ok') {
-                                alert(`SSH:\n${sshData.ssh_command}\n\nИмя: ${sshData.username}\nIP: ${sshData.ip}`);
-                            } else {
-                                alert('SSH информация недоступна');
-                            }
+                            window.open("/ssh", '_blank')
                             break;
                             
-                        case 'anydesk':
-                            const anyData = await fetch('/api/anydesk').then(r => r.json());
-                            if (anyData.status === 'ok') {
-                                alert(`AnyDesk ID:\n${anyData.anydesk_id}`);
-                            } else {
-                                alert('AnyDesk не найден');
-                            }
-                            break;
+                        
                     }
                 } catch (err) {
                     alert('Ошибка связи с сервером');
@@ -400,6 +383,20 @@
                     btn.style.boxShadow = '';
                 }, 150);
             });
+        });
+
+        let touchstartX = 0;
+        let touchendX = 0;
+
+        document.addEventListener('touchstart', e => {
+            touchstartX = e.changedTouches[0].screenX;
+        });
+
+        document.addEventListener('touchend', e => {
+            touchendX = e.changedTouches[0].screenX;
+            if (touchendX < touchstartX - 50) {  // Свайп влево
+                window.location.href = '/';
+            }
         });
     </script>
 </body>

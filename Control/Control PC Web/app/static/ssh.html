@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSH · Избушка</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            background: #2e1b0e;
+            font-family: 'Palatino', 'Georgia', serif;
+            padding: 20px;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        
+        .ssh-panel {
+            max-width: 600px;
+            width: 100%;
+            background: #efdebc;
+            border-radius: 60px;
+            padding: 30px;
+            box-shadow: 0 20px 30px -5px #1f140a;
+            border: 3px solid #6b4f32;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2a1d0d;
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 0 #b58649;
+            margin-bottom: 30px;
+        }
+        
+        .ssh-info {
+            background: #8b693f;
+            border-radius: 30px;
+            padding: 20px;
+            color: white;
+            margin: 20px 0;
+        }
+        
+        .ssh-command {
+            background: #2e1b0e;
+            padding: 15px;
+            border-radius: 20px;
+            font-family: monospace;
+            font-size: 1.2rem;
+            margin: 10px 0;
+            word-break: break-all;
+        }
+        
+        .copy-btn {
+            background: #7c623e;
+            border: 4px ridge #ecca90;
+            border-radius: 30px;
+            padding: 15px 30px;
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+            text-align: center;
+            box-shadow: 0 5px 0 #4c351b;
+            transition: 0.1s;
+            margin: 20px auto;
+            display: inline-block;
+        }
+        
+        .copy-btn:active {
+            transform: translateY(5px);
+            box-shadow: none;
+        }
+        
+        .back-btn {
+            display: block;
+            text-align: center;
+            margin-top: 30px;
+            color: #2a1d0d;
+            text-decoration: none;
+            font-size: 1.2rem;
+        }
+        
+        .status {
+            background: #8b693f;
+            border-radius: 30px;
+            padding: 15px;
+            color: white;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="ssh-panel">
+        <h1>SSH ДОСТУПЪ</h1>
+        
+        <div class="status" id="status">
+            Загрузка данных...
+        </div>
+        
+        <div id="sshContent" style="display: none;">
+            <div class="ssh-info">
+                <div style="margin-bottom: 15px;">
+                    <i class="fas fa-user"></i> Имя пользователя: <strong id="username"></strong>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <i class="fas fa-network-wired"></i> IP адрес: <strong id="ip"></strong>
+                </div>
+                <div>
+                    <i class="fas fa-plug"></i> Порт: <strong id="port">22</strong>
+                </div>
+            </div>
+            
+            <div style="text-align: center;">
+                <div class="ssh-command" id="sshCommand" style="color: white; background: #2e1b0e; padding: 15px; border-radius: 20px; font-family: monospace; font-size: 1.2rem; margin: 10px 0; word-break: break-all;"></div>
+                <button class="copy-btn" onclick="copyToClipboard()">
+                    <i class="fas fa-copy"></i> Копировать команду
+                </button>
+            </div>
+        </div>
+        
+        <div id="errorMessage" style="display: none; color: #ffaaaa; text-align: center; padding: 20px;">
+            Ошибка загрузки SSH данных
+        </div>
+        
+        <a href="/" class="back-btn">← Вернуться в избушку</a>
+    </div>
+    
+    <script>
+        async function loadSSHData() {
+            try {
+                const res = await fetch('/api/ssh');
+                const data = await res.json();
+                
+                if (data.status === 'ok') {
+                    document.getElementById('username').textContent = data.username;
+                    document.getElementById('ip').textContent = data.ip;
+                    document.getElementById('sshCommand').textContent = data.ssh_command;
+                    
+                    document.getElementById('sshContent').style.display = 'block';
+                    document.getElementById('status').style.display = 'none';
+                } else {
+                    document.getElementById('status').style.display = 'none';
+                    document.getElementById('errorMessage').style.display = 'block';
+                }
+            } catch (err) {
+                document.getElementById('status').style.display = 'none';
+                document.getElementById('errorMessage').style.display = 'block';
+                console.error(err);
+            }
+        }
+        
+        function copyToClipboard() {
+            const command = document.getElementById('sshCommand').textContent;
+            navigator.clipboard.writeText(command).then(() => {
+                alert('Команда скопирована!');
+            });
+        }
+        
+        loadSSHData();
+
+        // Свайп для выхода
+        let touchstartX = 0;
+        let touchendX = 0;
+
+        document.addEventListener('touchstart', e => {
+            touchstartX = e.changedTouches[0].screenX;
+        });
+
+        document.addEventListener('touchend', e => {
+            touchendX = e.changedTouches[0].screenX;
+            if (touchendX < touchstartX - 50) {  // Свайп влево
+                window.location.href = '/';
+            }
+        });
+    </script>
+</body>
+</html>
