@@ -2,8 +2,8 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 
-from ..robot_client import robot_manager
-from ..command import COMMAND as cmd
+from app.robot_client import robot_manager
+from app.command import COMMAND as cmd
 
 router = APIRouter(prefix="/commands", tags=["commands"])
 
@@ -25,7 +25,7 @@ async def move(direction: str, req: CommandRequest):
     }
     
     if direction in dir_map:
-        command = f"{dir_map[direction]}#{req.speed}\n"
+        command = f"{dir_map[direction]}#{req.speed}"
         robot.send_command(command)
         return {"status": "ok", "command": direction}
     
@@ -35,35 +35,35 @@ async def move(direction: str, req: CommandRequest):
 async def hands_up():
     robot = robot_manager.get_robot()
     if robot and robot.connected:
-        robot.send_command(f"{cmd.CMD_HANDS_UP}\n")
+        robot.send_command(f"{cmd.CMD_HANDS_UP}")
     return {"status": "ok"}
 
 @router.post("/music/play")
 async def music_play():
     robot = robot_manager.get_robot()
     if robot and robot.connected:
-        robot.send_command(f"{cmd.CMD_MUSIC_PLAY}\n")
+        robot.send_command(f"{cmd.CMD_MUSIC_PLAY}")
     return {"status": "ok"}
 
 @router.post("/music/stop")
 async def music_stop():
     robot = robot_manager.get_robot()
     if robot and robot.connected:
-        robot.send_command(f"{cmd.CMD_MUSIC_STOP}\n")
+        robot.send_command(f"{cmd.CMD_MUSIC_STOP}")
     return {"status": "ok"}
 
 @router.post("/radio/play")
 async def radio_play():
     robot = robot_manager.get_robot()
     if robot and robot.connected:
-        robot.send_command(f"{cmd.CMD_RADIO_PLAY}\n")
+        robot.send_command(f"{cmd.CMD_RADIO_PLAY}")
     return {"status": "ok"}
 
 @router.post("/radio/stop")
 async def radio_stop():
     robot = robot_manager.get_robot()
     if robot and robot.connected:
-        robot.send_command(f"{cmd.CMD_RADIO_STOP}\n")
+        robot.send_command(f"{cmd.CMD_RADIO_STOP}")
     return {"status": "ok"}
 
 @router.post("/function/{num}")
@@ -114,6 +114,15 @@ async def menu():
         robot.send_command(f"{cmd.CMD_MENU}\n")
     return {"status": "ok"}
 
+@router.post("/sonic")
+async def sonic():
+    robot = robot_manager.get_robot()
+    if robot and robot.connected:
+        robot.send_command(f"{cmd.CMD_SONIC}\n")
+        # Возвращаем значение сонара
+        return {"status": "ok", "sonic": robot.get_sonic()}
+    return {"status": "ok"}
+    
 @router.post("/about/{num}")
 async def about(num: int):
     robot = robot_manager.get_robot()

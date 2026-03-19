@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Избушка · Старославянский стиль</title>
-    <!-- Font Awesome для иконок (камера, информация, ssh, anydesk) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         * {
@@ -24,11 +23,10 @@
             font-family: 'Palatino', 'Georgia', 'Times New Roman', serif;
         }
 
-        /* главный свиток */
         .scroll-panel {
-            max-width: 1000px;
+            max-width: 1200px;
             width: 100%;
-            background: #efdebc; /* старый пергамент */
+            background: #efdebc;
             background: radial-gradient(circle at 20% 30%, #f8e9cf, #dac292);
             border-radius: 150px 150px 60px 60px;
             box-shadow: 
@@ -42,7 +40,6 @@
             position: relative;
         }
 
-        /* орнамент сверху и снизу (древнерусский узор) */
         .ornament-top, .ornament-bottom {
             display: flex;
             justify-content: center;
@@ -61,7 +58,6 @@
             margin-top: 30px;
         }
 
-        /* большой баннер с изображением избушки */
         .hero-iconic {
             background: #c9ae83;
             background: linear-gradient(165deg, #e2c9a1, #b58f60);
@@ -77,7 +73,6 @@
             text-align: center;
         }
 
-        /* контейнер для картинки избушки (PNG) */
         .hut-image {
             display: flex;
             justify-content: center;
@@ -90,10 +85,9 @@
             width: 100%;
             height: auto;
             filter: drop-shadow(8px 12px 8px #3a2c1b);
-            image-rendering: crisp-edges; /* для сохранения чёткости пиксельной графики */
+            image-rendering: crisp-edges;
         }
 
-        /* архаичная надпись под избушкой */
         .hut-caption {
             font-size: 2.2rem;
             font-weight: bold;
@@ -115,21 +109,19 @@
             backdrop-filter: blur(1px);
         }
 
-        /* сетка для четырёх кнопок (как ладьи или ставни) */
         .button-grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 25px;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 20px;
             padding: 20px 5px 10px 5px;
         }
 
-        /* стиль кнопки — древняя чеканка */
         .slavic-btn {
             background: #7c623e;
             background: linear-gradient(150deg, #b4935c, #6e4f2b);
             border: 4px ridge #ecca90;
             border-radius: 60px 60px 30px 30px;
-            padding: 25px 10px 15px 10px;
+            padding: 20px 10px 15px 10px;
             box-shadow: 
                 0 10px 0 #4c351b,
                 0 15px 20px #00000060,
@@ -138,28 +130,28 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 18px;
+            gap: 15px;
             cursor: pointer;
             transition: all 0.1s ease-out;
             color: #fff4d6;
             text-shadow: 3px 3px 0 #412f18;
             font-weight: 800;
-            font-size: 1.7rem;
+            font-size: 1.5rem;
             border-top: 6px solid #e9c68e;
             border-bottom: 6px solid #4f381c;
             font-family: 'Georgia', 'Times New Roman', serif;
         }
 
         .slavic-btn i {
-            font-size: 3.5rem;
+            font-size: 3rem;
             filter: drop-shadow(4px 6px 2px #2d1e0b);
             color: #ffefc8;
         }
 
         .btn-label {
-            font-size: 1.4rem;
+            font-size: 1.2rem;
             background: #392f1eb3;
-            padding: 8px 20px;
+            padding: 5px 15px;
             border-radius: 60px;
             border: 2px solid #edb87a;
             box-shadow: inset 0 2px 6px #ffe7b0;
@@ -170,7 +162,6 @@
             color: #fcf0da;
         }
 
-        /* нажатие */
         .slavic-btn:active {
             transform: translateY(7px);
             box-shadow: 
@@ -186,7 +177,6 @@
             border-top-color: #ffdeaa;
         }
 
-        /* логотип организации внизу (старославянский стиль) */
         .org-footer {
             margin-top: 30px;
             padding: 18px 25px;
@@ -218,78 +208,51 @@
             filter: drop-shadow(3px 5px 3px #2a1c0c) brightness(1.2);
         }
 
-        .org-text {
-            font-size: 2rem;
-            color: #ffeec9;
-            text-shadow: 3px 3px 0 #4d3219, 5px 5px 0 #1f150a;
-            letter-spacing: 4px;
-            font-weight: bold;
-            font-family: 'Georgia', 'Times', serif;
-            text-transform: uppercase;
-            border-left: 3px solid #efd09e;
-            padding-left: 20px;
+        .ip-input {
+            margin: 20px 0;
+            text-align: center;
         }
 
-        .org-placeholder {
-            font-size: 1.9rem;
-            color: #ffe1a4;
-            text-shadow: 2px 2px 0 #634b28;
-            font-style: italic;
-            padding: 0 10px;
+        .ip-input input {
+            padding: 10px 20px;
+            border-radius: 30px;
+            border: 2px solid #6b4f32;
+            background: #efdebc;
+            font-size: 1.1rem;
+            width: 200px;
         }
 
-        /* декоративные элементы — кириллические буквы */
-        .old-cyr {
-            font-size: 1.9rem;
-            color: #7b623c;
-            margin: 0 5px;
+        .ip-input button {
+            padding: 10px 20px;
+            border-radius: 30px;
+            background: #7c623e;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 1.1rem;
+            margin-left: 10px;
         }
 
-        /* адаптация под мобильные */
-        @media (max-width: 750px) {
+        @media (max-width: 850px) {
             .button-grid {
-                gap: 12px;
-            }
-            .slavic-btn {
-                padding: 15px 5px 10px;
-                font-size: 1.2rem;
-            }
-            .slavic-btn i {
-                font-size: 2.5rem;
-            }
-            .btn-label {
-                font-size: 1rem;
-                padding: 5px 10px;
-            }
-            .hut-caption {
-                font-size: 1.8rem;
-                letter-spacing: 4px;
-            }
-            .org-text {
-                font-size: 1.5rem;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 15px;
             }
         }
 
         @media (max-width: 550px) {
             .button-grid {
-                grid-template-columns: 1fr 1fr;
+                grid-template-columns: repeat(2, 1fr);
             }
             .org-footer {
                 flex-direction: column;
                 text-align: center;
-            }
-            .org-text {
-                border-left: none;
-                border-top: 3px solid #efd09e;
-                padding-top: 12px;
-                padding-left: 0;
             }
         }
     </style>
 </head>
 <body>
     <div class="scroll-panel">
-        <!-- верхний орнамент (солярные символы) -->
         <div class="ornament-top">
             <span>☦</span>
             <span>✧</span>
@@ -300,44 +263,41 @@
             <span>☦</span>
         </div>
 
-        <!-- большой баннер с изображением избушки (PNG) -->
         <div class="hero-iconic">
             <div class="hut-image">
-                <!-- ЗДЕСЬ ВСТАВЬТЕ ССЫЛКУ НА ВАШУ PNG ИЗБУШКУ -->
-                <img src="img/izba.png"
-                     title="Избушка">
+                <img src="/static/img/izba.png" alt="Избушка" title="Избушка">
             </div>
-            <!-- подпись вязью -->
-            <div class="hut-caption">
-                ИЗБУШКА
-            </div>
+            <div class="hut-caption">ИЗБУШКА</div>
         </div>
 
-        <!-- четыре кнопки в древнерусском стиле -->
+        <div class="ip-input">
+            <input type="text" id="robotIp" placeholder="IP робота" value="192.168.1.100">
+            <button onclick="connectRobot()">Подключиться</button>
+        </div>
+
         <div class="button-grid">
-            <!-- camera -->
-            <div class="slavic-btn" role="button" tabindex="0" title="Око (камера)">
+            <div class="slavic-btn" role="button" tabindex="0" data-action="camera">
                 <i class="fas fa-camera-retro"></i>
                 <span class="btn-label">камера</span>
             </div>
-            <!-- info -->
-            <div class="slavic-btn" role="button" tabindex="0" title="Вести (инфо)">
-                <i class="fas fa-scroll"></i>  <!-- свиток вместо info -->
+            <div class="slavic-btn" role="button" tabindex="0" data-action="control">
+                <i class="fas fa-gamepad"></i>
+                <span class="btn-label">управление</span>
+            </div>
+            <div class="slavic-btn" role="button" tabindex="0" data-action="robotinfo">
+                <i class="fas fa-robot"></i>
                 <span class="btn-label">вѣсти</span>
             </div>
-            <!-- ssh -->
-            <div class="slavic-btn" role="button" tabindex="0" title="Доступъ ssh">
+            <div class="slavic-btn" role="button" tabindex="0" data-action="ssh">
                 <i class="fas fa-key"></i>
                 <span class="btn-label">ключь</span>
             </div>
-            <!-- anydesk -->
-            <div class="slavic-btn" role="button" tabindex="0" title="Зрѣлище AnyDesk">
-                <i class="fas fa-tower-broadcast"></i> <!-- терем/вещание -->
+            <div class="slavic-btn" role="button" tabindex="0" data-action="anydesk">
+                <i class="fas fa-tower-broadcast"></i>
                 <span class="btn-label">anydesk</span>
             </div>
         </div>
 
-        <!-- нижний орнамент -->
         <div class="ornament-bottom">
             <span>ꙮ</span>
             <span>✴</span>
@@ -348,59 +308,81 @@
             <span>☦</span>
         </div>
 
-        <!-- ЛОГОТИП ОРГАНИЗАЦИИ (внизу) -->
         <div class="org-footer">
             <div class="org-logo">
-                <!-- ЗДЕСЬ ВСТАВЬТЕ ССЫЛКУ НА ЛОГОТИП (PNG) -->
-                <img src="img/YADRO--1024X1024.png">
-                <img src="img/SibGUTI.png">
+                <img src="/static/img/YADRO--1024X1024.png" alt="YADRO">
+                <img src="/static/img/SibGUTI.png" alt="SibGUTI">
             </div>
-            <div class="org-placeholder">
         </div>
     </div>
 
-    <!-- скрипт для имитации кликов -->
     <script>
-    (function() {
-        const buttons = document.querySelectorAll('.slavic-btn');
-        const actions = ['camera', 'info', 'ssh', 'anydesk'];
+        async function connectRobot() {
+            const ip = document.getElementById('robotIp').value;
+            if (!ip) {
+                alert('Введи IP робота');
+                return;
+            }
+            
+            try {
+                const res = await fetch('/connect', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ip: ip})  // <-- отправляем объект {ip: "..."}
+                });
+                const data = await res.json();
+                alert(data.status === 'connected' ? 'Подключено к роботу!' : 'Ошибка подключения');
+            } catch (err) {
+                alert('Не удалось подключиться');
+            }
+        }
+        async function getRobotInfo() {
+            try {
+                const status = await fetch('/status').then(r => r.json());
+                let info = `Статус: ${status.connected ? 'Подключен' : 'Отключен'}\n`;
+                if (status.connected) {
+                    info += `IP робота: ${status.ip}\n`;
+                    info += 'Команды: движение, руки, музыка\n';
+                }
+                alert(info);
+            } catch (err) {
+                alert('Ошибка получения информации');
+            }
+        }
 
-        buttons.forEach((btn, idx) => {
+        const buttons = document.querySelectorAll('.slavic-btn');
+        buttons.forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 e.stopPropagation();
-                const action = actions[idx];
-                console.log(`[ИЗБУШКА] Призывъ: ${action}`);
+                const action = btn.dataset.action;
                 
-                // анимация нажатия
                 btn.style.transform = 'translateY(7px)';
                 btn.style.boxShadow = '0 3px 0 #4c351b, 0 12px 18px #00000080, inset 0 -3px 5px #caa76d';
                 
                 try {
                     switch(action) {
                         case 'camera':
-                            // Открываем страницу с видео
                             window.open('/video', '_blank');
                             break;
                             
-                        case 'info':
-                            // Получаем инфо с бека
-                            const status = await fetch('/status').then(r => r.json());
-                            const sonic = await fetch('/api/commands/sonic', {method: 'POST'});
-                            alert(`Статус: ${status.connected ? 'Подключен' : 'Отключен'}\nIP: ${status.ip || 'нет'}`);
+                        case 'control':
+                            window.open('/control', '_blank');
+                            break;
+                            
+                        case 'robotinfo':
+                            await getRobotInfo();
                             break;
                             
                         case 'ssh':
-                            // Получаем SSH данные
                             const sshData = await fetch('/api/ssh').then(r => r.json());
                             if (sshData.status === 'ok') {
-                                alert(`SSH команда:\n${sshData.ssh_command}\n\nИмя: ${sshData.username}\nIP: ${sshData.ip}`);
+                                alert(`SSH:\n${sshData.ssh_command}\n\nИмя: ${sshData.username}\nIP: ${sshData.ip}`);
                             } else {
-                                alert('Ошибка получения SSH данных');
+                                alert('SSH информация недоступна');
                             }
                             break;
                             
                         case 'anydesk':
-                            // Получаем AnyDesk ID
                             const anyData = await fetch('/api/anydesk').then(r => r.json());
                             if (anyData.status === 'ok') {
                                 alert(`AnyDesk ID:\n${anyData.anydesk_id}`);
@@ -411,7 +393,6 @@
                     }
                 } catch (err) {
                     alert('Ошибка связи с сервером');
-                    console.error(err);
                 }
                 
                 setTimeout(() => {
@@ -419,13 +400,7 @@
                     btn.style.boxShadow = '';
                 }, 150);
             });
-
-            btn.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    btn.click();
-                }
-            });
         });
-    })();
-</script>
+    </script>
+</body>
+</html>

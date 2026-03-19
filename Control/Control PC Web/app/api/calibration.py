@@ -2,8 +2,8 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from enum import Enum
 
-from ..robot_client import robot_manager
-from ..command import COMMAND as cmd
+from app.robot_client import robot_manager
+from app.command import COMMAND as cmd
 
 router = APIRouter(prefix="/calibration", tags=["calibration"])
 

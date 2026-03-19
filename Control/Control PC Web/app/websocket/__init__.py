@@ -1,1 +1,1 @@
-from . import video_stream
+from .video_stream import video_manager

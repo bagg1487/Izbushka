@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Видео с робота</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #2e1b0e;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .video-container {
+            max-width: 800px;
+            width: 100%;
+            background: #efdebc;
+            border-radius: 60px;
+            padding: 20px;
+            box-shadow: 0 20px 30px -5px #1f140a;
+            border: 3px solid #6b4f32;
+        }
+        .video-frame {
+            width: 100%;
+            background: #000;
+            border-radius: 30px;
+            overflow: hidden;
+        }
+        #videoFeed {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        .status {
+            text-align: center;
+            margin-top: 20px;
+            color: #2a1d0d;
+            font-size: 1.2rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="video-container">
+        <div class="video-frame">
+            <img id="videoFeed" src="" alt="Video Stream">
+        </div>
+        <div class="status" id="status">Подключение к видео...</div>
+    </div>
+
+    <script>
+        const ws = new WebSocket(`ws://${location.host}/ws/video`);
+        const videoFeed = document.getElementById('videoFeed');
+        const statusDiv = document.getElementById('status');
+        
+        ws.onopen = () => {
+            statusDiv.textContent = 'Видео стрим активен';
+        };
+        
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === 'video') {
+                videoFeed.src = 'data:image/jpeg;base64,' + data.data;
+            }
+        };
+        
+        ws.onerror = () => {
+            statusDiv.textContent = 'Ошибка видео стрима';
+        };
+        
+        ws.onclose = () => {
+            statusDiv.textContent = 'Соединение закрыто';
+        };
+    </script>
+</body>
+</html>

@@ -14,6 +14,9 @@ import platform
 import os
 from contextlib import asynccontextmanager
 
+from app.api import calibration, commands, users
+from app.websocket import video_manager
+
 robot_socket = None
 robot_video_socket = None
 robot_connected = False
@@ -28,6 +31,7 @@ sonic_lock = threading.Lock()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("Server started")
+    os.makedirs("app/static/img", exist_ok=True)
     yield
     global robot_socket, robot_video_socket, robot_connected
     if robot_socket:
@@ -47,27 +51,43 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(calibration.router)
+app.include_router(commands.router)
+app.include_router(users.router)
+
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
 @app.get("/")
 async def serve_index():
-    """Отдает index.html при заходе на корневой URL"""
     index_path = os.path.join("app", "static", "index.html")
     if os.path.exists(index_path):
         return FileResponse(index_path)
     return {"error": "index.html not found"}
 
+@app.get("/video")
+async def serve_video_page():
+    video_path = os.path.join("app", "static", "video.html")
+    if os.path.exists(video_path):
+        return FileResponse(video_path)
+    return {"error": "video.html not found"}
+
 @app.post("/connect")
-async def connect(ip: str):
+async def connect(ip: dict):  # <-- принимаем как словарь
     global robot_socket, robot_video_socket, robot_connected, current_ip, video_thread_running
     
     try:
+        ip_address = ip.get("ip")  # <-- достаем ip из словаря
+        if not ip_address:
+            raise HTTPException(400, "IP address required")
+            
         robot_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        robot_socket.connect((ip, 5001))
+        robot_socket.connect((ip_address, 5001))
         
         robot_video_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        robot_video_socket.connect((ip, 8001))
+        robot_video_socket.connect((ip_address, 8001))
         
         robot_connected = True
-        current_ip = ip
+        current_ip = ip_address
         
         if not video_thread_running:
             video_thread = threading.Thread(target=video_receiver, daemon=True)
@@ -75,9 +95,9 @@ async def connect(ip: str):
             video_thread_running = True
         
         with open('IP.txt', 'w') as f:
-            f.write(ip)
+            f.write(ip_address)
             
-        return {"status": "connected", "ip": ip}
+        return {"status": "connected", "ip": ip_address}
     except Exception as e:
         raise HTTPException(500, f"Connection failed: {e}")
 
@@ -100,13 +120,10 @@ async def status():
 
 @app.get("/api/ssh")
 async def get_ssh_info():
-    """Возвращает информацию для SSH подключения"""
     system = platform.system()
     try:
-        # Получаем IP адрес сервера
         if system == "Windows":
             result = subprocess.run(['ipconfig'], capture_output=True, text=True)
-            # Парсим IP из ipconfig
             import re
             ip_match = re.search(r'IPv4-адрес[^\d]*([\d.]+)', result.stdout)
             local_ip = ip_match.group(1) if ip_match else 'unknown'
@@ -114,7 +131,6 @@ async def get_ssh_info():
             result = subprocess.run(['hostname', '-I'], capture_output=True, text=True)
             local_ip = result.stdout.strip().split()[0] if result.stdout else 'unknown'
         
-        # Получаем имя пользователя
         username = subprocess.run(['whoami'], capture_output=True, text=True).stdout.strip()
         
         return {
@@ -127,15 +143,12 @@ async def get_ssh_info():
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
-# Для AnyDesk
 @app.get("/api/anydesk")
 async def get_anydesk_info():
-    """Возвращает информацию для AnyDesk подключения"""
     try:
         system = platform.system()
         
         if system == "Windows":
-            # Пытаемся найти AnyDesk и получить ID
             possible_paths = [
                 r"C:\Program Files (x86)\AnyDesk\AnyDesk.exe",
                 r"C:\Program Files\AnyDesk\AnyDesk.exe"
@@ -150,7 +163,6 @@ async def get_anydesk_info():
                         "message": f"AnyDesk ID: {anydesk_id}"
                     }
         else:
-            # Linux/Mac
             result = subprocess.run(['anydesk', '--get-id'], capture_output=True, text=True)
             anydesk_id = result.stdout.strip()
             return {
@@ -163,38 +175,74 @@ async def get_anydesk_info():
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
+
 def video_receiver():
     global last_frame, robot_video_socket, robot_connected
+
     
     while robot_connected:
         try:
+            
             stream_bytes = robot_video_socket.recv(4)
+          
             if not stream_bytes or len(stream_bytes) < 4:
+                print("⚠️ No video data received, continuing...")
                 continue
                 
             leng = struct.unpack('<L', stream_bytes[:4])[0]
-            jpg = robot_video_socket.recv(leng)
+          
             
+            # Читаем сам кадр
+            jpg = b''
+            bytes_received = 0
+            while bytes_received < leng:
+                chunk = robot_video_socket.recv(min(4096, leng - bytes_received))
+                if not chunk:
+                    print("⚠️ Connection closed while reading frame")
+                    break
+                jpg += chunk
+                bytes_received += len(chunk)
+          
             frame = cv2.imdecode(np.frombuffer(jpg, dtype=np.uint8), cv2.IMREAD_COLOR)
             if frame is not None:
                 with frame_lock:
                     last_frame = frame
-        except:
+                
+            else:
+                print("❌ Failed to decode frame")
+                
+        except Exception as e:
+            print(f"🔥 Video receiver error: {e}")
+            import traceback
+            traceback.print_exc()
             break
+    
+    print("💀 Video receiver thread stopped")
 
 def send_command(cmd: str):
     global robot_socket, robot_connected
     if robot_connected and robot_socket:
         try:
-            robot_socket.send(cmd.encode('utf-8'))
+            command = cmd + '\n'
+            robot_socket.send(command.encode('utf-8'))
+            print(f"📤 Sending: {command.strip()}")
             return True
-        except:
+        except Exception as e:
+            print(f"❌ Send error: {e}")
             robot_connected = False
     return False
 
+@app.get("/control")
+async def serve_control():
+    control_path = os.path.join("app", "static", "control.html")
+    if os.path.exists(control_path):
+        return FileResponse(control_path)
+    return {"error": "control.html not found"}    
+
 @app.websocket("/ws/video")
 async def video_stream(websocket: WebSocket):
-    await websocket.accept()
+    client_id = str(id(websocket))
+    await video_manager.connect(websocket, client_id)
     try:
         while True:
             if robot_connected and last_frame is not None:
@@ -204,7 +252,7 @@ async def video_stream(websocket: WebSocket):
                 _, buffer = cv2.imencode('.jpg', frame)
                 frame_base64 = base64.b64encode(buffer).decode('utf-8')
                 
-                await websocket.send_json({
+                await video_manager.send_frame(client_id, {
                     "type": "video",
                     "data": frame_base64,
                     "sonic": sonic_value
@@ -212,131 +260,4 @@ async def video_stream(websocket: WebSocket):
             
             await asyncio.sleep(0.03)
     except:
-        pass
-
-@app.post("/api/commands/move/{direction}")
-async def move(direction: str, speed: int = 50):
-    if not robot_connected:
-        raise HTTPException(400, "Robot not connected")
-    
-    commands = {
-        "forward": "CMD_MOVE_FORWARD",
-        "backward": "CMD_MOVE_BACKWARD",
-        "left": "CMD_MOVE_LEFT",
-        "right": "CMD_MOVE_RIGHT",
-        "stop": "CMD_MOVE_STOP"
-    }
-    
-    if direction in commands:
-        send_command(f"{commands[direction]}#{speed}\n")
-        return {"status": "ok"}
-    
-    raise HTTPException(400, "Invalid direction")
-
-@app.post("/api/commands/hands")
-async def hands_up():
-    if robot_connected:
-        send_command("CMD_HANDS_UP\n")
-    return {"status": "ok"}
-
-@app.post("/api/commands/music/play")
-async def music_play():
-    if robot_connected:
-        send_command("CMD_MUSIC_PLAY\n")
-    return {"status": "ok"}
-
-@app.post("/api/commands/music/stop")
-async def music_stop():
-    if robot_connected:
-        send_command("CMD_MUSIC_STOP\n")
-    return {"status": "ok"}
-
-@app.post("/api/commands/radio/play")
-async def radio_play():
-    if robot_connected:
-        send_command("CMD_RADIO_PLAY\n")
-    return {"status": "ok"}
-
-@app.post("/api/commands/radio/stop")
-async def radio_stop():
-    if robot_connected:
-        send_command("CMD_RADIO_STOP\n")
-    return {"status": "ok"}
-
-@app.post("/api/commands/function/{num}")
-async def function(num: int):
-    if not robot_connected:
-        raise HTTPException(400, "Robot not connected")
-    
-    func_map = {
-        1: "CMD_CLENCH_LEFT",
-        2: "CMD_CLENCH_LEFT",
-        3: "CMD_LOOK_UP",
-        4: "CMD_LOOK_DOWN"
-    }
-    
-    if num in func_map:
-        send_command(f"{func_map[num]}\n")
-        return {"status": "ok"}
-    
-    raise HTTPException(400, "Invalid function")
-
-@app.post("/api/commands/look/stop")
-async def look_stop():
-    if robot_connected:
-        send_command("CMD_LOOK_STOP\n")
-    return {"status": "ok"}
-
-@app.post("/api/commands/sonic")
-async def sonic():
-    if robot_connected:
-        send_command("CMD_SONIC\n")
-    return {"status": "ok"}
-
-@app.post("/api/commands/video/toggle")
-async def video_toggle(state: bool):
-    if robot_connected:
-        val = "1" if state else "0"
-        send_command(f"CMD_VIDEO_TRANSMISSION#{val}\n")
-    return {"status": "ok"}
-
-@app.post("/api/commands/menu")
-async def menu():
-    if robot_connected:
-        send_command("CMD_MENU\n")
-    return {"status": "ok"}
-
-@app.post("/api/commands/about/{num}")
-async def about(num: int):
-    if robot_connected:
-        send_command(f"CMD_FUNC_ABOUT#{num}\n")
-    return {"status": "ok"}
-
-@app.post("/api/calibration/mode/{state}")
-async def calibration_mode(state: bool):
-    if robot_connected:
-        val = "1" if state else "0"
-        send_command(f"CMD_CALIBRATION_MOD#{val}\n")
-    return {"status": "ok"}
-
-@app.post("/api/calibration/set")
-async def set_calibration(leg: str, servo: str, value: int):
-    if robot_connected:
-        send_command(f"CMD_CALIBRATION#{leg}#{servo}#{value}\n")
-    return {"status": "ok"}
-
-@app.get("/api/calibration/data")
-async def get_calibration():
-    return {"status": "ok"}  
-
-@app.post("/api/users/add")
-async def add_user(name: str):
-    if robot_connected:
-        send_command("CMD_ADD_USER#1\n")
-    return {"status": "ok"}
-
-@app.post("/api/users/photo")
-async def take_photo(name: str):
-    if robot_connected and name:
-        send_command(f"CMD_TAKE_PHOTO#{name}\n")
-    return {"status": "ok"}
+        video_manager.disconnect(client_id)
