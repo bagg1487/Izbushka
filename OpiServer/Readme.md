@@ -1,11 +1,35 @@
 # Сервер на orange pi
-Новейшая версия [сервера](https://github.com/bagg1487/Izbushka/tree/main/OpiServer/server_final_new/Server_final) 
-Нет файлов с апишкой (находится на локальном устройстве)
-Файлы с апишкой:
-- yandexGPT_API.py
-- __pacache__/yandexGPT_API.cpython-39.pyc
-- __pacache__/yandexGPT_API.cpython-310.pyc
-- __pacache__/Speaker.cpython-39.pyc
+Новейшая версия сервера
+
+Сервер от организатора
+
+Функциональность нашего сервера:
+- *Server.py* - прием команд по TCP и передача видео с камеры
+- *UART.py* - движение и подьемы рук*.
+- *RadioPlayer.py* - радио
+- *FaceAction.py* - Реализован, но необходимо добавить казино
+
+Что перестало работать:
+- *Recognizer.py/Speaker.py/KeyPhraseAnalizer.py* - анализ речи
+- *GeminiAssistant.py* - перестал работать, нужен прокси. Необходимо выбрать другой ИИ
+- *Service.wikisearch()* - функция которая заходит в поисковик за информацией с ИИ
+
+
+Что ещё не реализовано/не подключено:
+- *UART.py* - поднятие корпуса(наклон) *^*
+- *ServoControl.py* - калибровка сервоприводов
+- Чтение ультразвукового датчика *+*
+- *MusicPlayer.py* - Воспроизведение локальной музыки
+- *VideoPlayer.py* - вывод видео
+- *RockPapperScrissor.py* - игра в Камень-ножницы-бумага
+- *Service.py* - Service.joke()/Service.makeQR()/Service.calculate() не подключено
+
+И это лишь малая часть
+
+***Важно!***
+Выноски: *^* обозначают совместную работу с STM32, обращаться к [студенту](https://github.com/Darkness1853?tab=repositories)
+
+Выноски: *+* обозначает работа с железом/подключение пинов и др.
 
 ---
 # Работа сервера:

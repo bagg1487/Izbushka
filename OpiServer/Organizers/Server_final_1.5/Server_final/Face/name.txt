@@ -1,0 +1,11 @@
+0	aleksandr
+1	aleksandr
+2	aleksandr
+3	artem
+4	artem
+5	artem
+6	artem
+7	artem
+8	artem
+9	artem
+10	artem
