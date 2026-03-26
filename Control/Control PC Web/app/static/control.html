@@ -298,7 +298,7 @@
 
         document.addEventListener('touchend', e => {
             touchendX = e.changedTouches[0].screenX;
-            if (touchendX > touchstartX + 50) {  // Свайп влево
+            if (touchendX > touchstartX + 50) {  
                 window.location.href = '/';
             }
         });
