@@ -1,7 +1,7 @@
 # Сервер на orange pi
-Новейшая версия сервера
+Новейшая версия [сервера](https://github.com/bagg1487/Izbushka/tree/main/OpiServer/server_final_new/Server_final)
 
-Сервер от организатора
+Сервер от [организатора](https://github.com/bagg1487/Izbushka/tree/main/OpiServer/Organizers/Server_final_1.5/Server_final)
 
 Функциональность нашего сервера:
 - *Server.py* - прием команд по TCP и передача видео с камеры
