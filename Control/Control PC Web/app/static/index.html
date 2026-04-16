@@ -270,11 +270,6 @@
             <div class="hut-caption">ИЗБУШКА</div>
         </div>
 
-        <div class="ip-input">
-            <input type="text" id="robotIp" placeholder="IP робота" value="10.0.0.2">
-            <button onclick="connectRobot()">Подключиться</button>
-        </div>
-
         <div class="button-grid">
             <div class="slavic-btn" role="button" tabindex="0" data-action="camera">
                 <i class="fas fa-camera-retro"></i>
@@ -308,30 +303,8 @@
     </div>
 
     <script>
-        async function connectRobot() {
-            const ip = document.getElementById('robotIp').value;
-            if (!ip) {
-                alert('Введи IP робота');
-                return;
-            }
-            
-            try {
-                const res = await fetch('/connect', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ip: ip})  
-                });
-                const data = await res.json();
-                if (data.status === 'connected') {
-                    alert('Подключено к роботу!');
-                } else {
-                    alert('Ошибка подключения');
-                }
-            } catch (err) {
-                alert('Не удалось подключиться');
-            }
-        }
 
+        
         const buttons = document.querySelectorAll('.slavic-btn');
         buttons.forEach(btn => {
             btn.addEventListener('click', async (e) => {

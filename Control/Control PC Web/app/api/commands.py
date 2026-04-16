@@ -1,8 +1,8 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from typing import Optional
 
-from app.robot_client import robot_manager
+from app.auth import get_current_user
 from app.command import COMMAND as cmd
 
 router = APIRouter(prefix="/commands", tags=["commands"])
@@ -11,9 +11,8 @@ class CommandRequest(BaseModel):
     speed: Optional[int] = 50
 
 @router.post("/move/{direction}")
-async def move(direction: str, req: CommandRequest):
-    robot = robot_manager.get_robot()
-    if not robot or not robot.connected:
+async def move(direction: str, req: CommandRequest, current_user = Depends(get_current_user)):
+    if not robot_connected:
         raise HTTPException(400, "Robot not connected")
     
     dir_map = {
@@ -26,98 +25,49 @@ async def move(direction: str, req: CommandRequest):
     
     if direction in dir_map:
         command = f"{dir_map[direction]}#{req.speed}"
-        robot.send_command(command)
+        send_command(command)
         return {"status": "ok", "command": direction}
     
     raise HTTPException(400, "Invalid direction")
 
 @router.post("/hands")
-async def hands_up():
-    robot = robot_manager.get_robot()
-    if robot and robot.connected:
-        robot.send_command(f"{cmd.CMD_HANDS_UP}")
+async def hands_up(current_user = Depends(get_current_user)):
+    if robot_connected:
+        send_command(f"{cmd.CMD_HANDS_UP}")
     return {"status": "ok"}
 
 @router.post("/music/play")
-async def music_play():
-    robot = robot_manager.get_robot()
-    if robot and robot.connected:
-        robot.send_command(f"{cmd.CMD_MUSIC_PLAY}")
+async def music_play(current_user = Depends(get_current_user)):
+    if robot_connected:
+        send_command(f"{cmd.CMD_MUSIC_PLAY}")
     return {"status": "ok"}
 
 @router.post("/music/stop")
-async def music_stop():
-    robot = robot_manager.get_robot()
-    if robot and robot.connected:
-        robot.send_command(f"{cmd.CMD_MUSIC_STOP}")
+async def music_stop(current_user = Depends(get_current_user)):
+    if robot_connected:
+        send_command(f"{cmd.CMD_MUSIC_STOP}")
     return {"status": "ok"}
 
 @router.post("/radio/play")
-async def radio_play():
-    robot = robot_manager.get_robot()
-    if robot and robot.connected:
-        robot.send_command(f"{cmd.CMD_RADIO_PLAY}")
+async def radio_play(current_user = Depends(get_current_user)):
+    if robot_connected:
+        send_command(f"{cmd.CMD_RADIO_PLAY}")
     return {"status": "ok"}
 
 @router.post("/radio/stop")
-async def radio_stop():
-    robot = robot_manager.get_robot()
-    if robot and robot.connected:
-        robot.send_command(f"{cmd.CMD_RADIO_STOP}")
-    return {"status": "ok"}
-
-@router.post("/function/{num}")
-async def function(num: int):
-    robot = robot_manager.get_robot()
-    if not robot or not robot.connected:
-        raise HTTPException(400, "Robot not connected")
-    
-    func_map = {
-        1: cmd.CMD_FUNC_1,
-        2: cmd.CMD_FUNC_2,
-        3: cmd.CMD_FUNC_3,
-        4: cmd.CMD_FUNC_4
-    }
-    
-    if num in func_map:
-        robot.send_command(f"{func_map[num]}")
-        return {"status": "ok"}
-    
-    raise HTTPException(400, "Invalid function")
-
-@router.post("/look/stop")
-async def look_stop():
-    robot = robot_manager.get_robot()
-    if robot and robot.connected:
-        robot.send_command(f"{cmd.CMD_LOOK_STOP}")
-    return {"status": "ok"}
-
-@router.post("/sonic")
-async def sonic():
-    robot = robot_manager.get_robot()
-    if robot and robot.connected:
-        robot.send_command(f"{cmd.CMD_SONIC}")
-        return {"status": "ok", "sonic": robot.get_sonic()}
-    return {"status": "ok"}
-
-@router.post("/video/toggle")
-async def video_toggle(state: bool):
-    robot = robot_manager.get_robot()
-    if robot and robot.connected:
-        val = "1" if state else "0"
-        robot.send_command(f"{cmd.CMD_VIDEO}#{val}")
+async def radio_stop(current_user = Depends(get_current_user)):
+    if robot_connected:
+        send_command(f"{cmd.CMD_RADIO_STOP}")
     return {"status": "ok"}
 
 @router.post("/menu")
-async def menu():
-    robot = robot_manager.get_robot()
-    if robot and robot.connected:
-        robot.send_command(f"{cmd.CMD_MENU}")
+async def menu(current_user = Depends(get_current_user)):
+    if robot_connected:
+        send_command(f"{cmd.CMD_MENU}")
     return {"status": "ok"}
 
 @router.post("/about/{num}")
-async def about(num: int):
-    robot = robot_manager.get_robot()
-    if robot and robot.connected:
-        robot.send_command(f"{cmd.CMD_FUNC_ABOUT}#{num}")
+async def about(num: int, current_user = Depends(get_current_user)):
+    if robot_connected:
+        send_command(f"{cmd.CMD_FUNC_ABOUT}#{num}")
     return {"status": "ok"}

@@ -1,41 +1,101 @@
-from fastapi import FastAPI, WebSocket, HTTPException
+from fastapi import FastAPI, Depends, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+from fastapi import WebSocket, WebSocketDisconnect
 import socket
-import struct
 import cv2
-import numpy as np
 import asyncio
 import base64
 import threading
 import os
 from contextlib import asynccontextmanager
+import logging
+from dotenv import load_dotenv
 
-from app.api import calibration, commands, users
-from app.websocket import video_manager
+from app.api.calibration import router as calibration_router
+from app.api.commands import router as commands_router
+from app.api.users import router as users_router
+from app.api.auth import router as auth_router
+from app.auth import get_current_user
+
+load_dotenv()
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+ROBOT_IP = os.getenv("ROBOT_IP", "192.168.15.2")
+ROBOT_COMMAND_PORT = int(os.getenv("ROBOT_COMMAND_PORT", "5001"))
+RTSP_URL = os.getenv("RTSP_URL", "rtsp://192.168.15.2:8554/stream")
 
 robot_socket = None
-robot_video_socket = None
 robot_connected = False
-current_ip = None
-video_thread_running = False
+rtsp_cap = None
+rtsp_running = False
+active_websockets = []
 last_frame = None
-sonic_value = "0"
-
 frame_lock = threading.Lock()
+
+def send_command(cmd: str):
+    global robot_socket, robot_connected
+    if robot_connected and robot_socket:
+        try:
+            command = cmd + '\n'
+            robot_socket.send(command.encode('utf-8'))
+            return True
+        except Exception as e:
+            logger.error(f"Command send error: {e}")
+            robot_connected = False
+    return False
+
+def rtsp_capture_thread():
+    global last_frame, rtsp_running, rtsp_cap, RTSP_URL
+    while rtsp_running:
+        try:
+            if rtsp_cap is None or not rtsp_cap.isOpened():
+                rtsp_cap = cv2.VideoCapture(RTSP_URL)
+                continue
+            ret, frame = rtsp_cap.read()
+            if ret and frame is not None:
+                with frame_lock:
+                    last_frame = frame
+        except Exception as e:
+            logger.error(f"RTSP capture error: {e}")
+        cv2.waitKey(1)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    global robot_socket, robot_connected, rtsp_cap, rtsp_running
+    
     print("Server started")
-    os.makedirs("static/img", exist_ok=True)
+    os.makedirs("app/static/img", exist_ok=True)
+    
+    try:
+        robot_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        robot_socket.settimeout(5)
+        robot_socket.connect((ROBOT_IP, ROBOT_COMMAND_PORT))
+        robot_connected = True
+        logger.info(f"Connected to robot at {ROBOT_IP}:{ROBOT_COMMAND_PORT}")
+    except Exception as e:
+        logger.error(f"Failed to connect to robot: {e}")
+        robot_connected = False
+    
+    rtsp_cap = cv2.VideoCapture(RTSP_URL)
+    if rtsp_cap.isOpened():
+        rtsp_running = True
+        logger.info(f"RTSP stream opened: {RTSP_URL}")
+        thread = threading.Thread(target=rtsp_capture_thread, daemon=True)
+        thread.start()
+    else:
+        logger.error(f"Failed to open RTSP stream: {RTSP_URL}")
+    
     yield
-    global robot_socket, robot_video_socket, robot_connected
+    
+    rtsp_running = False
     if robot_socket:
         robot_socket.close()
-    if robot_video_socket:
-        robot_video_socket.close()
-    robot_connected = False
+    if rtsp_cap:
+        rtsp_cap.release()
     print("Server stopped")
 
 app = FastAPI(lifespan=lifespan)
@@ -48,9 +108,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(calibration.router)
-app.include_router(commands.router)
-app.include_router(users.router)
+app.include_router(auth_router)
+app.include_router(calibration_router)
+app.include_router(commands_router)
+app.include_router(users_router)
 
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
@@ -61,132 +122,46 @@ async def serve_index():
         return FileResponse(index_path)
     return {"error": "index.html not found"}
 
-@app.get("/video")
-async def serve_video_page():
-    video_path = os.path.join("app", "static", "video.html")
-    if os.path.exists(video_path):
-        return FileResponse(video_path)
-    return {"error": "video.html not found"}
-
-@app.post("/connect")
-async def connect(ip: dict):
-    global robot_socket, robot_video_socket, robot_connected, current_ip, video_thread_running
-    
-    try:
-        ip_address = ip.get("ip")
-        if not ip_address:
-            raise HTTPException(400, "IP address required")
-            
-        robot_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        robot_socket.connect((ip_address, 5001))
-        
-        robot_video_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        robot_video_socket.connect((ip_address, 8001))
-        
-        robot_connected = True
-        current_ip = ip_address
-        
-        if not video_thread_running:
-            video_thread = threading.Thread(target=video_receiver, daemon=True)
-            video_thread.start()
-            video_thread_running = True
-        
-        with open('IP.txt', 'w') as f:
-            f.write(ip_address)
-            
-        return {"status": "connected", "ip": ip_address}
-    except Exception as e:
-        raise HTTPException(500, f"Connection failed: {e}")
-
-@app.post("/disconnect")
-async def disconnect():
-    global robot_socket, robot_video_socket, robot_connected
-    robot_connected = False
-    if robot_socket:
-        robot_socket.close()
-    if robot_video_socket:
-        robot_video_socket.close()
-    return {"status": "disconnected"}
-
-@app.get("/status")
-async def status():
-    return {
-        "connected": robot_connected,
-        "ip": current_ip if robot_connected else None
-    }
-
 @app.get("/control")
-async def serve_control():
+async def serve_control(current_user = Depends(get_current_user)):
     control_path = os.path.join("app", "static", "control.html")
-    if os.path.exists(control_path):
-        return FileResponse(control_path)
-    return {"error": "control.html not found"}
+    return FileResponse(control_path)
+
+@app.get("/video")
+async def serve_video(current_user = Depends(get_current_user)):
+    video_path = os.path.join("app", "static", "video.html")
+    return FileResponse(video_path)
 
 @app.get("/info")
-async def serve_info():
+async def serve_info(current_user = Depends(get_current_user)):
     info_path = os.path.join("app", "static", "info.html")
-    if os.path.exists(info_path):
-        return FileResponse(info_path)
-    return {"error": "info.html not found"}
+    return FileResponse(info_path)
 
-def video_receiver():
-    global last_frame, robot_video_socket, robot_connected
-    
-    while robot_connected:
-        try:
-            stream_bytes = robot_video_socket.recv(4)
-          
-            if not stream_bytes or len(stream_bytes) < 4:
-                continue
-                
-            leng = struct.unpack('<L', stream_bytes[:4])[0]
-          
-            jpg = b''
-            bytes_received = 0
-            while bytes_received < leng:
-                chunk = robot_video_socket.recv(min(4096, leng - bytes_received))
-                if not chunk:
-                    break
-                jpg += chunk
-                bytes_received += len(chunk)
-          
-            frame = cv2.imdecode(np.frombuffer(jpg, dtype=np.uint8), cv2.IMREAD_COLOR)
-            if frame is not None:
-                with frame_lock:
-                    last_frame = frame
-        except Exception as e:
-            break
-
-def send_command(cmd: str):
-    global robot_socket, robot_connected
-    if robot_connected and robot_socket:
-        try:
-            command = cmd + '\n'
-            robot_socket.send(command.encode('utf-8'))
-            return True
-        except Exception:
-            robot_connected = False
-    return False
+@app.get("/status")
+async def status(current_user = Depends(get_current_user)):
+    return {
+        "connected": robot_connected,
+        "robot_ip": ROBOT_IP if robot_connected else None,
+        "rtsp_url": RTSP_URL
+    }
 
 @app.websocket("/ws/video")
 async def video_stream(websocket: WebSocket):
-    client_id = str(id(websocket))
-    await video_manager.connect(websocket, client_id)
+    global last_frame, active_websockets
+    await websocket.accept()
+    active_websockets.append(websocket)
     try:
         while True:
-            if robot_connected and last_frame is not None:
+            if last_frame is not None:
                 with frame_lock:
                     frame = last_frame.copy()
-                
-                _, buffer = cv2.imencode('.jpg', frame)
+                _, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 70])
                 frame_base64 = base64.b64encode(buffer).decode('utf-8')
-                
-                await video_manager.send_frame(client_id, {
-                    "type": "video",
-                    "data": frame_base64,
-                    "sonic": sonic_value
-                })
-            
-            await asyncio.sleep(0.03)
-    except:
-        video_manager.disconnect(client_id)
+                await websocket.send_json({"type": "video", "data": frame_base64})
+            await asyncio.sleep(1/30)
+    except WebSocketDisconnect:
+        active_websockets.remove(websocket)
+    except Exception as e:
+        logger.error(f"WebSocket error: {e}")
+        if websocket in active_websockets:
+            active_websockets.remove(websocket)
