@@ -5,3 +5,4 @@ __pycache__/
 *.pyo
 *.task
 .DS_Store
+*.code-workspace
