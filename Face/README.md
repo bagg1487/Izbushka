@@ -6,5 +6,5 @@ python3 -m venv izba-env
 
 source izba-env/bin/activate
 
-pip install requirements.txt
+pip install -r requirements.txt
 

@@ -1,0 +1,7 @@
+
+*.db
+*.sqlite3
+*.sqlite
+*.pt
+*.pth
+*.bin

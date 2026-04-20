@@ -6,7 +6,7 @@ izbushka_project_8_1\cmsis_os2.o: C:\Keil\ARM\ARMCC\bin\..\include\stddef.h
 izbushka_project_8_1\cmsis_os2.o: ../Drivers/CMSIS/Include/cmsis_compiler.h
 izbushka_project_8_1\cmsis_os2.o: ../Drivers/CMSIS/Include/cmsis_armcc.h
 izbushka_project_8_1\cmsis_os2.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/FreeRTOS.h
-izbushka_project_8_1\cmsis_os2.o: ../Core/Inc/FreeRTOSConfig.h
+izbushka_project_8_1\cmsis_os2.o: ..\Core\Inc\FreeRTOSConfig.h
 izbushka_project_8_1\cmsis_os2.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/projdefs.h
 izbushka_project_8_1\cmsis_os2.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/portable.h
 izbushka_project_8_1\cmsis_os2.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/deprecated_definitions.h
@@ -27,7 +27,7 @@ izbushka_project_8_1\cmsis_os2.o: ../Drivers/CMSIS/Include/cmsis_version.h
 izbushka_project_8_1\cmsis_os2.o: ../Drivers/CMSIS/Include/mpu_armv7.h
 izbushka_project_8_1\cmsis_os2.o: ../Drivers/CMSIS/Device/ST/STM32F4xx/Include/system_stm32f4xx.h
 izbushka_project_8_1\cmsis_os2.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h
-izbushka_project_8_1\cmsis_os2.o: ../Core/Inc/stm32f4xx_hal_conf.h
+izbushka_project_8_1\cmsis_os2.o: ..\Core\Inc\stm32f4xx_hal_conf.h
 izbushka_project_8_1\cmsis_os2.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rcc.h
 izbushka_project_8_1\cmsis_os2.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_def.h
 izbushka_project_8_1\cmsis_os2.o: ../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f4xx.h

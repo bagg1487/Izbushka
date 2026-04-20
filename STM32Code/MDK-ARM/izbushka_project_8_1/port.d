@@ -2,7 +2,7 @@ izbushka_project_8_1\port.o: ../Middlewares/Third_Party/FreeRTOS/Source/portable
 izbushka_project_8_1\port.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/FreeRTOS.h
 izbushka_project_8_1\port.o: C:\Keil\ARM\ARMCC\bin\..\include\stddef.h
 izbushka_project_8_1\port.o: C:\Keil\ARM\ARMCC\bin\..\include\stdint.h
-izbushka_project_8_1\port.o: ../Core/Inc/FreeRTOSConfig.h
+izbushka_project_8_1\port.o: ..\Core\Inc\FreeRTOSConfig.h
 izbushka_project_8_1\port.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/projdefs.h
 izbushka_project_8_1\port.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/portable.h
 izbushka_project_8_1\port.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/deprecated_definitions.h

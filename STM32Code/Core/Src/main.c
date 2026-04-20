@@ -1,20 +1,20 @@
 /* USER CODE BEGIN Header */
 /**
-    ******************************************************************************
-    * @file           : main.c
-    * @brief          : Main program body
-    ******************************************************************************
-    * @attention
-    *
-    * Copyright (c) 2023 STMicroelectronics.
-    * All rights reserved.
-    *
-    * This software is licensed under terms that can be found in the LICENSE file
-    * in the root directory of this software component.
-    * If no LICENSE file comes with this software, it is provided AS-IS.
-    *
-    ******************************************************************************
-    */
+  ******************************************************************************
+  * @file           : main.c
+  * @brief          : Main program body
+  ******************************************************************************
+  * @attention
+  *
+  * Copyright (c) 2023 STMicroelectronics.
+  * All rights reserved.
+  *
+  * This software is licensed under terms that can be found in the LICENSE file
+  * in the root directory of this software component.
+  * If no LICENSE file comes with this software, it is provided AS-IS.
+  *
+  ******************************************************************************
+  */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
@@ -22,20 +22,17 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-        #include "pca9685.h"
-        #include "mpu6050.h"
-        #include "LegControl.h"
-        #include "servo.h"
-        #include <math.h>
-        #include <stdlib.h>
-        #include <stdbool.h>
-        #include <stdio.h>
-        #include <string.h> // for strtok
-        #include <stdlib.h>
-
-        #include <string.h>
-        #include "DHT.h"
-        #include "L298NDriver.h"
+#include "pca9685.h"
+#include "LegControl.h"
+#include "servo.h"
+#include <math.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <string.h> // for strtok
+#include <stdlib.h>
+#include <string.h>
+#include "L298NDriver.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -46,64 +43,53 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
-    #define M_PI 3.141592
+#define M_PI 3.141592
 
+#define SERVO_COUNT    20 //number of servos used
 
-    #define SERVO_COUNT    20 //number of servos used
+#ifndef constrain
+#define constrain(amt,low,high) ((amt)<(low)?(low):((amt)>(high)?(high):(amt)))
+#endif
 
-    #define firstAddressMPU6050 0xD0 // first i2c address for MPU6050 module
-    #define secondAddressMPU6050 0xD2 // second i2c address for MPU6050 module
+#define BUFFER_SIZE 64
 
-    #ifndef constrain
-    #define constrain(amt,low,high) ((amt)<(low)?(low):((amt)>(high)?(high):(amt)))
-    #endif
-    #define BUFFER_SIZE 32
+servo_t servoLA, servoLB, servoLC, servoLD, servoLE,
+                servoRA, servoRB, servoRC, servoRD, servoRE;
 
+/*Temp and liquid*/
+    char msg[40];
+    /*reed switch*/
+    int reedModule=0;
+    /*light sensor*/
+    int lightSensor = 0;
 
+/* UART */
+bool flag_send;                                       // Flag to allow tx_buffer[] output to the serial port
+uint8_t queue_message;                                // Message queue (since it works with interrupts or DMA. See lesson 6)
+uint8_t tx_buffer[BUFFER_SIZE];                    // tx_buffer to output to the port whatever the MCU receives via rx
+uint8_t rx_buffer[1];                                 // Buffer to receive information (one symbol at a time, to constantly enter the interrupt and process the incoming message)
+uint8_t error_message[] = "tx buffer is crowded\n\r"; // Message indicating that tx_buffer[size_tx_buffer] is full
+uint8_t error_counter;                                // Ensures "tx buffer is crowded\n\r" message displays only once
+volatile uint8_t rx_counter;                          // Counter for incoming characters
+volatile uint8_t size_message;                        // Message size for port output
 
+/*Ultrasonic*/
+// Definition of macros for TRIG and ECHO pins
+#define TRIG_PIN GPIO_PIN_7
+#define TRIG_PORT GPIOA
+#define ECHO_PIN GPIO_PIN_6
+#define ECHO_PORT GPIOA
 
-
-    servo_t servoLA, servoLB, servoLC, servoLD, servoLE,
-                    servoRA, servoRB, servoRC, servoRD, servoRE;
-
-    int state = 6;                                        // Variable for the hut's state
-    /*Temp and liquid*/
-        DHT_data dht_data;
-        static DHT_sensor dht = {GPIOB, GPIO_PIN_4, DHT11, GPIO_NOPULL};
-        char msg[40]; 
-        /*reed switch*/
-        int reedModule=0;
-        /*light sensor*/
-        int lightSensor = 0;
-
-    /* UART */
-    #define size_tx_buffer 100                            // Length of the tx buffer
-    bool flag_send;                                       // Flag to allow tx_buffer[] output to the serial port
-    uint8_t queue_message;                                // Message queue (since it works with interrupts or DMA. See lesson 6)
-    uint8_t tx_buffer[size_tx_buffer];                    // tx_buffer to output to the port whatever the MCU receives via rx
-    uint8_t rx_buffer[1];                                 // Buffer to receive information (one symbol at a time, to constantly enter the interrupt and process the incoming message)
-    uint8_t error_message[] = "tx buffer is crowded\n\r"; // Message indicating that tx_buffer[size_tx_buffer] is full
-    uint8_t error_counter;                                // Ensures "tx buffer is crowded\n\r" message displays only once
-    volatile uint8_t rx_counter;                          // Counter for incoming characters
-    volatile uint8_t size_message;                        // Message size for port output
-
-    /*Ultrasonic*/
-    // Definition of macros for TRIG and ECHO pins
-    #define TRIG_PIN GPIO_PIN_7
-    #define TRIG_PORT GPIOA
-    #define ECHO_PIN GPIO_PIN_6
-    #define ECHO_PORT GPIOA
-
-    // Variable declarations
-    uint32_t pMillis;       // Time in milliseconds
-    uint32_t Value1 = 0;    // Value 1
-    uint32_t Value2 = 0;    // Value 2
-    uint16_t Distance = 0;  // Distance in centimeters
-    float dist=0;
-    uint32_t icValue1 = 0;
-    uint32_t icValue2 = 0;
-    uint8_t  isFirstCaptured = 0;
-    float distance = 0.0f;
+// Variable declarations
+uint32_t pMillis;       // Time in milliseconds
+uint32_t Value1 = 0;    // Value 1
+uint32_t Value2 = 0;    // Value 2
+uint16_t Distance = 0;  // Distance in centimeters
+float dist=0;
+uint32_t icValue1 = 0;
+uint32_t icValue2 = 0;
+uint8_t  isFirstCaptured = 0;
+float distance = 0.0f;
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -133,13 +119,7 @@ const osThreadAttr_t defaultTask_attributes = {
   .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
-/* Definitions for MPU5060ReadTask */
-osThreadId_t MPU5060ReadTaskHandle;
-const osThreadAttr_t MPU5060ReadTask_attributes = {
-  .name = "MPU5060ReadTask",
-  .stack_size = 256 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
-};
+
 /* Definitions for ServoControlTas */
 osThreadId_t ServoControlTasHandle;
 const osThreadAttr_t ServoControlTas_attributes = {
@@ -178,11 +158,7 @@ osMessageQueueId_t rxDataUART1Handle;
 const osMessageQueueAttr_t rxDataUART1_attributes = {
   .name = "rxDataUART1"
 };
-/* Definitions for MPU6050Mutex */
-osMutexId_t MPU6050MutexHandle;
-const osMutexAttr_t MPU6050Mutex_attributes = {
-  .name = "MPU6050Mutex"
-};
+
 /* Definitions for UARTDataMutex */
 osMutexId_t UARTDataMutexHandle;
 const osMutexAttr_t UARTDataMutex_attributes = {
@@ -195,44 +171,33 @@ const osEventFlagsAttr_t myEvent01_attributes = {
 };
 /* USER CODE BEGIN PV */
 
-    #define gyroMemorySize 5
-
-    // ????????? ???-??????????
+    // PID Controller structure
     typedef struct {
-        float Kp;           // ???????????????? ???????????
-        float Ki;           // ???????????? ???????????
-        float Kd;           // ???????????????? ???????????
-        float error;        // ??????? ??????
-        float prev_error;   // ?????????? ??????
-        float integral;     // ???????????? ?????
-        float derivative;   // ???????????
-        float output;       // ???????? ??????
-        float setpoint;     // ???????? ???????? (??????? ????????)
-        float actual;       // ??????? ???????? (??????? ????????)
-        float dt;           // ????? ????? ????????????
-        float max_integral; // ??????????? ???????????? ????????????
-        float max_output;   // ??????????? ????????? ???????
+        float Kp;           // Proportional coefficient
+        float Ki;           // Integral coefficient
+        float Kd;           // Derivative coefficient
+        float error;        // Current error
+        float prev_error;   // Previous error
+        float integral;     // Integral sum
+        float derivative;   // Derivative
+        float output;       // Output signal
+        float setpoint;     // Setpoint (target speed)
+        float actual;       // Current value (current speed)
+        float dt;           // Time between updates
+        float max_integral; // Integral limit
+        float max_output;   // Output signal limit
     } PID_Controller;
 
-    // ???-?????????? ??? ??????? ??????
+    // PID controllers for each motor
     PID_Controller pid_motor1 = {0};
     PID_Controller pid_motor2 = {0};
 
-    // ?????????? ??? ????????? ????????
-    volatile uint32_t encoder1_count = 0;
-    volatile uint32_t encoder2_count = 0;
-    uint32_t prev_encoder1_count = 0;
-    uint32_t prev_encoder2_count = 0;
-    float motor1_speed_rpm = 0;
-    float motor2_speed_rpm = 0;
-    uint32_t last_speed_calc_time = 0;
     uint32_t last_pid_update = 0;
 
-    // ??????? ???????? (????? ??????????? ????? UART)
-    float target_speed1 = 400.0f;  // ??????? ??? ???????? ??? ?????? 1
-    float target_speed2 = 700.0f;  // ??????? ??? ???????? ??? ?????? 2
+    // Target speeds (can be configured via UART)
+    float target_speed1 = 400.0f;  // Target PWM value for motor 1
+    float target_speed2 = 700.0f;  // Target PWM value for motor 2
 
-    MPU6050_t LeftLegGyroData, RightLegGyroData, BodyGyroData;
     /* Motor structure initialization */
 
     /* Leg motors with speed control */
@@ -266,26 +231,6 @@ const osEventFlagsAttr_t myEvent01_attributes = {
             .GPIO_Port2 = GPIOB,            // Port for the second pin
             .GPIO_Pin2 = GPIO_PIN_11,       // Pin number for the second pin
     };
-
-    double angleXLocal;      // Local deviation angle on the X-axis
-    double angleYLocal;      // Local deviation angle on the Y-axis
-    double hHatch;           // Height of the center of mass when in a falling state
-    double lStep;            // Step length needed to bring the center of mass to the balance point
-    double degreeY;
-    // double accelX;
-    double accelXLocal;
-    double pid;
-    double absY;             // Absolute value of the calculated angle
-    int Angle = 90;
-    uint8_t ActiveServo;
-
-    float servoAngleChange[6][gyroMemorySize]; // Array to track the change in gyroscope angles (6 = 3 gyroscopes * 2 axes)
-
-    uint8_t HTU21D_RX_Data[3];
-    float HTU21D_Temperature;
-    uint16_t HTU21D_ADC_Raw;
-    uint8_t HTU21D_Temp_Cmd = 0xE3;
-    #define HTU21D_Address (0x40 << 1)
 
     double part1 = 10;       // Length of the first part of the leg
     double part2 = 13;       // Length of the second part of the leg
@@ -326,22 +271,21 @@ const osEventFlagsAttr_t myEvent01_attributes = {
 
     int degree90State = 0;
     int main_mode=1;
-    /* Left leg configuration */
+    
+    /* Left leg configuration - only B and C servos are used */
     Leg leftLeg = {
             .part1Length = 10,
             .part2Length = 13,
             .centerGravity = {0, 0, 9},
-            .servoARange = {10, 170},
             .servoBRange = {10, 170},
             .servoCRange = {10, 170},
     };
 
-    /* Right leg configuration */
+    /* Right leg configuration - only B and C servos are used */
     Leg rightLeg = {
             .part1Length = 10,
             .part2Length = 13,
             .centerGravity = {0, 0, 9},
-            .servoARange = {10, 170},
             .servoBRange = {10, 170},
             .servoCRange = {10, 170},
     };
@@ -368,6 +312,8 @@ const osEventFlagsAttr_t myEvent01_attributes = {
 
     /* Creating variables for PCA9685 modules */
     PCA9685 pca9685_leg, pca9685_hand;
+    
+    volatile int state = 6;                                        // Variable for the robot's state
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -383,14 +329,13 @@ static void MX_ADC1_Init(void);
 static void MX_I2C3_Init(void);
 static void MX_TIM1_Init(void);
 void StartDefaultTask(void *argument);
-void StartMPU5060ReadTask(void *argument);
 void StartServoControlTask(void *argument);
 void StartUARTTask(void *argument);
 void StartHandServoControlTask(void *argument);
 void StartMotorControlTask(void *argument);
 
 /* USER CODE BEGIN PFP */
-    // ??????? ???-??????????
+    // PID Controller functions
     void PID_Init(PID_Controller* pid, float Kp, float Ki, float Kd, float dt, float max_output) {
         pid->Kp = Kp;
         pid->Ki = Ki;
@@ -403,50 +348,50 @@ void StartMotorControlTask(void *argument);
         pid->output = 0;
         pid->setpoint = 0;
         pid->actual = 0;
-        pid->max_integral = max_output * 2; // ??????????? ?????????
+        pid->max_integral = max_output * 2; // Integral limit
         pid->max_output = max_output;
     }
 
-    // ?????????? ???-??????????
+    // PID Controller update
     float PID_Update(PID_Controller* pid, float setpoint, float actual) {
         pid->setpoint = setpoint;
         pid->actual = actual;
         
-        // ?????????? ??????
+        // Calculate error
         pid->error = pid->setpoint - pid->actual;
         
-        // ???????????? ???????????? (? ??????????)
+        // Integral component (with saturation)
         pid->integral += pid->error * pid->dt;
         
-        // ????????? (??????????? ?????????)
+        // Anti-windup (integral limit)
         if (pid->integral > pid->max_integral) {
             pid->integral = pid->max_integral;
         } else if (pid->integral < -pid->max_integral) {
             pid->integral = -pid->max_integral;
         }
         
-        // ???????????????? ????????????
+        // Derivative component
         pid->derivative = (pid->error - pid->prev_error) / pid->dt;
         
-        // ?????????? ????????? ???????
+        // Calculate output signal
         pid->output = (pid->Kp * pid->error) + 
                       (pid->Ki * pid->integral) + 
                       (pid->Kd * pid->derivative);
         
-        // ??????????? ????????? ???????
+        // Output signal limit
         if (pid->output > pid->max_output) {
             pid->output = pid->max_output;
         } else if (pid->output < -pid->max_output) {
             pid->output = -pid->max_output;
         }
         
-        // ?????????? ?????? ??? ????????? ????????
+        // Save error for next iteration
         pid->prev_error = pid->error;
         
         return pid->output;
     }
 
-    // ????? ???????????? ????????????
+    // Reset integral component
     void PID_Reset(PID_Controller* pid) {
         pid->integral = 0;
         pid->prev_error = 0;
@@ -454,13 +399,14 @@ void StartMotorControlTask(void *argument);
         pid->output = 0;
     }
 
-    // ?????????? ?????????? ?????????? ? ??? (??? ?????????)
+    // Simplified motor control with PID (without encoders)
     void L298N_move_PID(Motor motor, int dir, float target_pwm, PID_Controller* pid, float current_pwm) {
-        // ?????????? ???????????
+        // Set direction
         switch(dir) {
             case -1:
                 HAL_GPIO_WritePin(motor.GPIO_Port1, motor.GPIO_Pin1, 1);
                 HAL_GPIO_WritePin(motor.GPIO_Port2, motor.GPIO_Pin2, 0);
+                target_pwm = -target_pwm; // Negative speed for reverse direction
                 break;
             case 1:
                 HAL_GPIO_WritePin(motor.GPIO_Port1, motor.GPIO_Pin1, 0);
@@ -474,17 +420,17 @@ void StartMotorControlTask(void *argument);
                 return;
         }
         
-        // ???????? ??? ? ???????? ???????? ??? ????????
+        // Update PID and get output PWM value
         float pid_output = PID_Update(pid, target_pwm, current_pwm);
         
-        // ?????????????? ? ?????????? ???????? ???
+        // Convert to absolute PWM value
         int pwm_value = (int)fabs(pid_output);
         
-        // ??????????? ??? (???????? 1500, ??? ??? ?????? ??????? 1500)
+        // PWM limit (max 1500, because timer period is 1500)
         if (pwm_value > 1500) pwm_value = 1500;
         if (pwm_value < 0) pwm_value = 0;
         
-        // ????????? ???
+        // Set PWM
         __HAL_TIM_SET_COMPARE(motor.htim, motor.channel, pwm_value);
     }
 
@@ -532,12 +478,13 @@ void StartMotorControlTask(void *argument);
                             break;
             }
     }
+    
     int getServoCAngle(int servoAngleD,int deltaAngleC,int deltaAngleD){
         int result = 180-(servoAngleD-deltaAngleD-angleAlpha+deltaAngleC);
         return result; 
     }
 
-    // ??????? ??????? ???????-????????
+    // Function to send trigger pulse
     void HCSR04_Trigger()
     {
             HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_SET); // TRIG - PA0
@@ -546,48 +493,41 @@ void StartMotorControlTask(void *argument);
     }
 
     char* getSensorInfo(){
-            dht_data = DHT_getData(&dht); 
-        
-            reedModule = HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_5);
 
-            HAL_ADC_Start(&hadc1);  // ADC start
-            HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);  
-            lightSensor = HAL_ADC_GetValue(&hadc1);  
-            int light = round((lightSensor / 4095.0) * 100);  
-            HAL_ADC_Stop(&hadc1);  // ADC stop
-            dist = distance;
-            int smoke_sensor=0;
-            int touch_sensor = 0;
-                    // ??????? ???????? ? UART
-            sprintf(msg, "CMD_SENSORS#%d#%d#%d#%d#%.2f#%d#%d\n",(uint8_t)dht_data.temp, (uint8_t)dht_data.hum, reedModule,light,dist,smoke_sensor,touch_sensor);
-            return msg;
-    }
+    int fake_temp = 0;   
+    int fake_hum = 0;    
+
+    reedModule = HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_5);
+
+    HAL_ADC_Start(&hadc1);  
+    HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);  
+    lightSensor = HAL_ADC_GetValue(&hadc1);  
+    int light = round((lightSensor / 4095.0) * 100);  
+    HAL_ADC_Stop(&hadc1);  
+    
+    dist = distance;
+    int smoke_sensor = 0;
+    int touch_sensor = 0;
+
+    sprintf(msg, "CMD_SENSORS#%d#%d#%d#%d#%.2f#%d#%d\n",
+            fake_temp, fake_hum, reedModule, light, dist, smoke_sensor, touch_sensor);
+            
+    return msg;
+		}
         
     void setServoAngle(char leg,char servo, int angle){
             if(leg=='L'){
                 switch(servo){
-                    case 'A': leftLeg.calibrationAngle.A = angle;
-                        break;
                     case 'B': leftLeg.calibrationAngle.B = angle;
                         break;
                     case 'C': leftLeg.calibrationAngle.C = angle;
                         break;
-                    case 'D': leftLeg.calibrationAngle.D = angle;
-                        break;
-                    case 'E': leftLeg.calibrationAngle.E = angle;
-                        break;
                 }
             }else if(leg=='R'){
                 switch(servo){
-                    case 'A': rightLeg.calibrationAngle.A = angle;
-                        break;
                     case 'B': rightLeg.calibrationAngle.B = angle;
                         break;
                     case 'C': rightLeg.calibrationAngle.C = angle;
-                        break;
-                    case 'D': rightLeg.calibrationAngle.D = angle;
-                        break;
-                    case 'E': rightLeg.calibrationAngle.E = angle;
                         break;
                 }
             }else if(leg=='H'){
@@ -620,49 +560,45 @@ void StartMotorControlTask(void *argument);
     }
 
     int getMaxAngle(ServosAngle current, ServosAngle target){
-
-        int deltaAngles[5] = {abs(current.A-target.A),abs(current.B-target.B),abs(current.C-target.C),abs(current.D-target.D),abs(current.E-target.E)};
+        // Only B and C servos are used for legs
+        int deltaAngles[2] = {abs(current.B-target.B),abs(current.C-target.C)};
         int maxAngle = deltaAngles[0];    
-        for(int i = 1;i<5;i++){
+        for(int i = 1;i<2;i++){
             if(maxAngle<deltaAngles[i])
                 maxAngle=deltaAngles[i];
         }
         return maxAngle;
     }
 
-    void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
-            // A character has been received, the interrupt is triggered, and here we will handle the received data.
-            if (rx_buffer[0] != '\r') { // If the incoming character is not '\r'
-                    tx_buffer[rx_counter] = rx_buffer[0]; // Add this character to tx_buffer
-                    rx_counter++; // Increment the count of incoming characters
-                    size_message = rx_counter; // Set the message size to be sent to the serial port
-                    if (size_message >= size_tx_buffer && error_counter == 0) { // If message size exceeds buffer size, display buffer overflow message
-                            HAL_UART_Transmit_DMA(&huart1, error_message,
-                                                                        sizeof error_message / sizeof error_message[0]);
-                            error_counter++; // Error message counter to send only once
-                            flag_send = 0; // Disallow message output to the port due to buffer overflow
-                    }
-            } else if (rx_buffer[0] == '\r') { // If the incoming character is '\r'
-                    tx_buffer[rx_counter] = '\n'; // Our message is fully received. Add a newline character
-                    // tx_buffer[rx_counter + 1] = '\r'; // Optionally add carriage return
-                    // tx_buffer[rx_counter + 2] = '\0'; // Manually add a null terminator since it does not add itself
-                    size_message = rx_counter + 1; // Increase the size of the message sent to the port
-                    rx_counter = 0; // Reset the incoming character counter to receive a new message
-                    if (size_message >= size_tx_buffer) { // Again, if message size exceeds buffer, show buffer overflow message
-                            flag_send = 0; // Disallow output to the port due to overflow
-                            HAL_UART_Transmit_DMA(&huart1, error_message,
-                                                                        sizeof error_message / sizeof error_message[0]);
-                    } else {
-                            flag_send = 1; // Allow message output to the port if within buffer size
-                            error_counter = 0; // Reset error counter
-                    }
-            }
-            HAL_UART_Receive_IT(&huart1, rx_buffer, 1); // Restart data reception after each interrupt
-    }
+    void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+		{
+				if (huart->Instance == USART1) {
+
+						if (rx_counter < (BUFFER_SIZE - 2)) { 
+								if (rx_buffer[0] != '\r') {
+										tx_buffer[rx_counter++] = rx_buffer[0];
+										size_message = rx_counter;
+								} else {
+										tx_buffer[rx_counter++] = '\n'; 
+										tx_buffer[rx_counter] = '\0';   
+										size_message = rx_counter;
+										rx_counter = 0;                 
+										flag_send = true;               
+										error_counter = 0;              
+								}
+						} else {
+								// OVERFLOW: Ignore byte, reset counter, send error (once)
+								if (error_counter == 0) {
+										HAL_UART_Transmit_IT(huart, error_message, sizeof(error_message) - 1);
+										error_counter++;
+								}
+								rx_counter = 0; 
+						}
+
+						HAL_UART_Receive_IT(&huart1, rx_buffer, 1);
+				}
+		}
                                     
-                            
-                            
-                            
     static uint8_t wait_for_gpio_state_timeout(GPIO_TypeDef *port, uint16_t pin, GPIO_PinState state, uint32_t timeout)
      {
             uint32_t Tickstart = HAL_GetTick();
@@ -766,40 +702,26 @@ void StartMotorControlTask(void *argument);
         //if (val==0) return 0;
         return 1;
     }
+		
     /*---------------------------------------------------------------------------------------
-    --Conversion of acceleration from raw data to m/s^2
-    ----------------------------------------------------------------------------------------*/
-    double accelCalc(double accelRaw){
-        double acceX = constrain(accelRaw, -16384, 16384)/ 16384.0;    // limit +-1g
-        double accel = acceX*9.82 ;           // convert ? +-1.0
-        return accel;
-
-    }
-
-    /*---------------------------------------------------------------------------------------
-    --Conversion function from angles to milliseconds (PWM)
-    ----------------------------------------------------------------------------------------*/
-    float degToMS(int deg){
-        return (float)deg*(2430-550)/180+550;
-    }
-    /*---------------------------------------------------------------------------------------
-    --Function of rotating all servos to a given angle of the lower part
+    --Function of rotating all servos to a given angle of the lower part (legs)
+    --Left leg: PIN 6 (C), PIN 7 (B) on PCA9685
+    --Right leg: PIN 15 (C), PIN 14 (B) on PCA9685
     ----------------------------------------------------------------------------------------*/
     void allServoLegSpin(PCA9685 pca9685, int speedDelay, ServosAngle left, ServosAngle right, int correctAngle) {
-            PCA9685_SetServoAngle(pca9685, 12, left.A);  // Right leg servo A
-            PCA9685_SetServoAngle(pca9685, 13, left.B);  // Right leg servo B
-            PCA9685_SetServoAngle(pca9685, 14, (left.C + correctAngle));  // Right leg servo C
-            PCA9685_SetServoAngle(pca9685, 15, left.D);  // Right leg servo D
+            // Left leg servos (B and C)
+            PCA9685_SetServoAngle(pca9685, 14, (left.C + correctAngle));  // Left leg servo C (PIN 6)
+            PCA9685_SetServoAngle(pca9685, 15, left.B);                    // Left leg servo B (PIN 7)
 
-            PCA9685_SetServoAngle(pca9685, 7, 180 - right.A);  // Left leg servo A
-            PCA9685_SetServoAngle(pca9685, 6, 180 - right.B);  // Left leg servo B
-            PCA9685_SetServoAngle(pca9685, 5, 180 - (right.C + correctAngle));  // Left leg servo C
-            PCA9685_SetServoAngle(pca9685, 4, 180 - right.D);  // Left leg servo D
+            // Right leg servos (B and C)
+            PCA9685_SetServoAngle(pca9685, 5, 180 - (right.C + correctAngle));  // Right leg servo C (PIN 15)
+            PCA9685_SetServoAngle(pca9685, 4, 180 - right.B);                    // Right leg servo B (PIN 14)
 
             HAL_Delay(speedDelay);  // Delay sets the speed of rotation
     }
+    
     /*---------------------------------------------------------------------------------------
-    --Function of rotating all servos to a given angle of the upper part
+    --Function of rotating all servos to a given angle of the upper part (hands)
     ----------------------------------------------------------------------------------------*/
     void allServoHandSpin(PCA9685 pca9685, int speedDelay, ServosAngle left, ServosAngle right, int correctAngle) {
             PCA9685_SetServoAngle(pca9685, 4, left.A);  // Right hand servo A
@@ -815,65 +737,51 @@ void StartMotorControlTask(void *argument);
             HAL_Delay(speedDelay);  // Delay sets the speed of rotation
     }
 
-    /*----------------------------------------------------------------------------------------------------
-    -- Function for calculating the angle of 3 sides of a triangle in degrees
-    ------------------------------------------------------------------------------------------------------*/
-    int angleCalc(double a, double b, double c) {
-
-        double acosValue = acos((a*a + b*b - c*c) / (2 * a * b));
-        int result = ceil(acosValue * 180 / M_PI);
-        return result;
-    }
-
     /*---------------------------------------------------------------------------------------
     --Comprehensive next step calculation for all servos
     ----------------------------------------------------------------------------------------*/
     ServosAngle getResultAngle( Leg leg,ServosAngle deltaResultAngles, int headTilt) {
-            ServosAngle resultAngles={0,0,0,0};
-            resultAngles.A= leg.currentAngle.A+deltaResultAngles.A;
+            ServosAngle resultAngles={0,0};
             resultAngles.B= leg.currentAngle.B+deltaResultAngles.B;
             resultAngles.C= leg.currentAngle.C+deltaResultAngles.C+headTilt;
-            resultAngles.D= leg.currentAngle.D+deltaResultAngles.D;
             return resultAngles;
     }
+    
     /*Greeting animation function consisting of 4 frames for the leading hand*/
     ServosAngle greatingStateLead(int frame,bool reverse){
-    ServosAngle    servosAngle = {0,0,0,0,0};
+    ServosAngle    servosAngle = {0,0};
         
         switch(frame){
             case 0:                                                            
                 servosAngle = setAngle(0,0,0,0,0);
                 break;
             case 1:                                                            
-                servosAngle = setAngle(-90,-60,-45,0,0);
+                servosAngle = setAngle(0,-90,-60,0,0);
                 break;
             case 2:    
-                servosAngle = setAngle(-90,-60,45,0,0);
+                servosAngle = setAngle(0,-90,60,0,0);
                 break;
             case 3: 
-                servosAngle = setAngle(-90,-60,-45,0,0);
+                servosAngle = setAngle(0,-90,-60,0,0);
                 break;                
             case 4: 
                 servosAngle = setAngle(0,0,0,0,0);
                 break;            
         }
             if(reverse){
-                    servosAngle.A= rightHand.defaultAngle.A+servosAngle.A;
                     servosAngle.B= rightHand.defaultAngle.B+servosAngle.B;
                     servosAngle.C= rightHand.defaultAngle.C+servosAngle.C;
-                    servosAngle.D= rightHand.defaultAngle.D+servosAngle.D;
                     return servosAngle;
             }else{
-                    servosAngle.A= leftHand.defaultAngle.A+servosAngle.A;
                     servosAngle.B= leftHand.defaultAngle.B+servosAngle.B;
                     servosAngle.C= leftHand.defaultAngle.C+servosAngle.C;
-                    servosAngle.D= leftHand.defaultAngle.D+servosAngle.D;
                     return servosAngle;
             }
     }
+    
     /*Greeting animation function consisting of 4 frames for the supporting hand*/
     ServosAngle greatingStateSupport(int frame,bool reverse){
-        ServosAngle    servosAngle = {0,0,0,0,0};
+        ServosAngle    servosAngle = {0,0};
         switch(frame){
             case 0: 
                 servosAngle = setAngle(0,0,50,0,0);
@@ -892,24 +800,19 @@ void StartMotorControlTask(void *argument);
             break;
         }
             if(!reverse){
-                    servosAngle.A= rightHand.defaultAngle.A+servosAngle.A;
                     servosAngle.B= rightHand.defaultAngle.B+servosAngle.B;
                     servosAngle.C= rightHand.defaultAngle.C+servosAngle.C;
-                    servosAngle.D= rightHand.defaultAngle.D+servosAngle.D;
-                     //servosAngle1 = getResultAngle(rightLeg,servosAngle,headTilt);
                     return servosAngle;
             }else{    
-                    servosAngle.A= leftHand.defaultAngle.A+servosAngle.A;
                     servosAngle.B= leftHand.defaultAngle.B+servosAngle.B;
                     servosAngle.C= leftHand.defaultAngle.C+servosAngle.C;
-                    servosAngle.D= leftHand.defaultAngle.D+servosAngle.D;
-                    //servosAngle1 = getResultAngle(leftLeg,servosAngle,headTilt);
                     return servosAngle;        
             }
     }
+    
     /*Animation 1 after 3 minutes of downtime for the lead leg*/
     ServosAngle hold3Anim1Lead(int frame, int turnLeft,int turnRight){
-    ServosAngle    servosAngle = {0,0,0,0,0};
+    ServosAngle    servosAngle = {0,0};
 
         switch(frame){
             case 0: 
@@ -919,15 +822,14 @@ void StartMotorControlTask(void *argument);
                 servosAngle = setAngle(0,0,0,0,0);
                 break;
         }
-        servosAngle.A= leftLeg.defaultAngle.A+servosAngle.A;
         servosAngle.B= leftLeg.defaultAngle.B+servosAngle.B;
         servosAngle.C= leftLeg.defaultAngle.C+servosAngle.C;
-        servosAngle.D= leftLeg.defaultAngle.D+servosAngle.D;
         return servosAngle;
     }
+    
     /*Animation 1 after 3 minutes of inactivity for the support leg*/
     ServosAngle hold3Anim1Support(int frame, int turnLeft,int turnRight){
-        ServosAngle    servosAngle = {0,0,0,0,0};
+        ServosAngle    servosAngle = {0,0};
 
         switch(frame){
             case 0: 
@@ -937,15 +839,14 @@ void StartMotorControlTask(void *argument);
                 servosAngle = setAngle(0,0,0,0,0);
                 break;
         }
-        servosAngle.A= rightLeg.defaultAngle.A+servosAngle.A;
         servosAngle.B= rightLeg.defaultAngle.B+servosAngle.B;
         servosAngle.C= rightLeg.defaultAngle.C+servosAngle.C;
-        servosAngle.D= rightLeg.defaultAngle.D+servosAngle.D;
         return servosAngle;
     }
+    
     /*Animation 3 after 3 minutes of downtime for the dominant hand*/
     ServosAngle hold3Anim3Lead(int frame){
-    ServosAngle    servosAngle = {0,0,0,0,0};
+    ServosAngle    servosAngle = {0,0};
 
         switch(frame){
             case 0: 
@@ -955,15 +856,14 @@ void StartMotorControlTask(void *argument);
                 servosAngle = setAngle(0,0,0,0,0);
                 break;
         }
-        servosAngle.A= leftHand.defaultAngle.A+servosAngle.A;
         servosAngle.B= leftHand.defaultAngle.B+servosAngle.B;
         servosAngle.C= leftHand.defaultAngle.C+servosAngle.C;
-        servosAngle.D= leftHand.defaultAngle.D+servosAngle.D;
         return servosAngle;
     }
+    
     /*Animation 3 after 3 minutes of downtime for support hand*/
     ServosAngle hold3Anim3Support(int frame){
-        ServosAngle    servosAngle = {0,0,0,0,0};
+        ServosAngle    servosAngle = {0,0};
 
         switch(frame){
             case 0: 
@@ -973,15 +873,14 @@ void StartMotorControlTask(void *argument);
                 servosAngle = setAngle(0,0,0,0,0);
                 break;
         }
-        servosAngle.A= rightHand.defaultAngle.A+servosAngle.A;
         servosAngle.B= rightHand.defaultAngle.B+servosAngle.B;
         servosAngle.C= rightHand.defaultAngle.C+servosAngle.C;
-        servosAngle.D= rightHand.defaultAngle.D+servosAngle.D;
         return servosAngle;
     }
+    
     /*Animation 1 after 10 minutes of inactivity for the lead leg*/
     ServosAngle hold10Anim1Lead_Leg(int frame){
-    ServosAngle    servosAngle = {0,0,0,0,0};
+    ServosAngle    servosAngle = {0,0};
 
         switch(frame){
             case 0: 
@@ -991,15 +890,14 @@ void StartMotorControlTask(void *argument);
                 servosAngle = setAngle(0,0,0,0,0);
                 break;
         }
-        servosAngle.A= leftLeg.defaultAngle.A+servosAngle.A;
         servosAngle.B= leftLeg.defaultAngle.B+servosAngle.B;
         servosAngle.C= leftLeg.defaultAngle.C+servosAngle.C;
-        servosAngle.D= leftLeg.defaultAngle.D+servosAngle.D;
         return servosAngle;
     }
+    
     /*Animation 1 after 10 minutes of inactivity for the support leg*/
     ServosAngle hold10Anim1Support_Leg(int frame){
-        ServosAngle    servosAngle = {0,0,0,0,0};
+        ServosAngle    servosAngle = {0,0};
 
         switch(frame){
             case 0: 
@@ -1009,182 +907,170 @@ void StartMotorControlTask(void *argument);
                 servosAngle = setAngle(0,0,0,0,0);
                 break;
         }
-        servosAngle.A= rightLeg.defaultAngle.A+servosAngle.A;
         servosAngle.B= rightLeg.defaultAngle.B+servosAngle.B;
         servosAngle.C= rightLeg.defaultAngle.C+servosAngle.C;
-        servosAngle.D= rightLeg.defaultAngle.D+servosAngle.D;
         return servosAngle;
     }
+    
     /*Animation 1 after 10 minutes of downtime for the dominant hand*/
     ServosAngle hold10Anim1Lead_Hand(int frame){
-    ServosAngle    servosAngle = {0,0,0,0,0};
+    ServosAngle    servosAngle = {0,0};
 
         switch(frame){
             case 0: 
-                servosAngle = setAngle(-30,0,90,0,0);
+                servosAngle = setAngle(0,-30,90,0,0);
                 break;
             case 1: 
                 servosAngle = setAngle(0,0,0,0,0);
                 break;
         }
-        servosAngle.A= leftHand.defaultAngle.A+servosAngle.A;
         servosAngle.B= leftHand.defaultAngle.B+servosAngle.B;
         servosAngle.C= leftHand.defaultAngle.C+servosAngle.C;
-        servosAngle.D= leftHand.defaultAngle.D+servosAngle.D;
         return servosAngle;
     }
+    
     /*Animation 1 after 10 minutes of downtime for support hand*/
     ServosAngle hold10Anim1Support_Hand(int frame){
-        ServosAngle    servosAngle = {0,0,0,0,0};
+        ServosAngle    servosAngle = {0,0};
 
         switch(frame){
             case 0: 
-                servosAngle = setAngle(-30,0,90,0,0);
+                servosAngle = setAngle(0,-30,90,0,0);
                 break;
             case 1: 
                 servosAngle = setAngle(0,0,0,0,0);
                 break;
         }
-        servosAngle.A= rightHand.defaultAngle.A+servosAngle.A;
         servosAngle.B= rightHand.defaultAngle.B+servosAngle.B;
         servosAngle.C= rightHand.defaultAngle.C+servosAngle.C;
-        servosAngle.D= rightHand.defaultAngle.D+servosAngle.D;
         return servosAngle;
     }
+    
     /*Animation 2 after 10 minutes of downtime for the dominant hand*/
     ServosAngle hold10Anim2Lead_Hand(int frame){
-    ServosAngle    servosAngle = {0,0,0,0,0};
+    ServosAngle    servosAngle = {0,0};
 
         switch(frame){
             case 0: 
-                servosAngle = setAngle(-30,0,0,0,0);
+                servosAngle = setAngle(0,-30,0,0,0);
                 break;
             case 1: 
                 servosAngle = setAngle(0,0,0,0,0);
                 break;
         }
-        servosAngle.A= leftHand.defaultAngle.A+servosAngle.A;
         servosAngle.B= leftHand.defaultAngle.B+servosAngle.B;
         servosAngle.C= leftHand.defaultAngle.C+servosAngle.C;
-        servosAngle.D= leftHand.defaultAngle.D+servosAngle.D;
         return servosAngle;
     }
+    
     /*Animation 2 after 10 minutes of downtime for support hand*/
     ServosAngle hold10Anim2Support_Hand(int frame){
-        ServosAngle    servosAngle = {0,0,0,0,0};
+        ServosAngle    servosAngle = {0,0};
 
         switch(frame){
             case 0: 
-                servosAngle = setAngle(-30,0,0,0,0);
+                servosAngle = setAngle(0,-30,0,0,0);
                 break;
             case 1: 
                 servosAngle = setAngle(0,0,0,0,0);
                 break;
         }
-        servosAngle.A= rightHand.defaultAngle.A+servosAngle.A;
         servosAngle.B= rightHand.defaultAngle.B+servosAngle.B;
         servosAngle.C= rightHand.defaultAngle.C+servosAngle.C;
-        servosAngle.D= rightHand.defaultAngle.D+servosAngle.D;
         return servosAngle;
     }
+    
     /*Animation 3 after 10 minutes of downtime for the dominant hand*/
     ServosAngle hold10Anim3Lead_Hand(int frame){
-    ServosAngle    servosAngle = {0,0,0,0,0};
+    ServosAngle    servosAngle = {0,0};
 
         switch(frame){
             case 0: 
-                servosAngle = setAngle(60,0,10,0,0);
+                servosAngle = setAngle(0,60,10,0,0);
                 break;
             case 1: 
-                servosAngle = setAngle(60,0,-10,0,0);
+                servosAngle = setAngle(0,60,-10,0,0);
                 break;
             case 2: 
-                servosAngle = setAngle(60,0,10,0,0);
+                servosAngle = setAngle(0,60,10,0,0);
                 break;
             case 3: 
-                servosAngle = setAngle(60,0,-10,0,0);
+                servosAngle = setAngle(0,60,-10,0,0);
                 break;
         }
-        servosAngle.A= leftHand.defaultAngle.A+servosAngle.A;
         servosAngle.B= leftHand.defaultAngle.B+servosAngle.B;
         servosAngle.C= leftHand.defaultAngle.C+servosAngle.C;
-        servosAngle.D= leftHand.defaultAngle.D+servosAngle.D;
         return servosAngle;
     }
+    
     /*run animation*/
     ServosAngle runAnimLead_Hand(int frame){
-    ServosAngle    servosAngle = {0,0,0,0,0};
+    ServosAngle    servosAngle = {0,0};
 
         switch(frame){
             case 0: 
-                servosAngle = setAngle(60,5,60,0,0);
+                servosAngle = setAngle(0,60,60,0,0);
                 break;
             case 1: 
                 servosAngle = setAngle(0,0,0,0,0);
                 break;
         }
-        servosAngle.A= leftHand.defaultAngle.A+servosAngle.A;
         servosAngle.B= leftHand.defaultAngle.B+servosAngle.B;
         servosAngle.C= leftHand.defaultAngle.C+servosAngle.C;
-        servosAngle.D= leftHand.defaultAngle.D+servosAngle.D;
         return servosAngle;
     }
+    
     ServosAngle runAnimSupport_Hand(int frame){
-    ServosAngle    servosAngle = {0,0,0,0,0};
+    ServosAngle    servosAngle = {0,0};
 
         switch(frame){
             case 0: 
-                servosAngle = setAngle(60,5,60,0,0);
+                servosAngle = setAngle(0,60,60,0,0);
                 break;
             case 1: 
                 servosAngle = setAngle(0,0,0,0,0);
                 break;
         }
-        servosAngle.A= rightHand.defaultAngle.A+servosAngle.A;
         servosAngle.B= rightHand.defaultAngle.B+servosAngle.B;
         servosAngle.C= rightHand.defaultAngle.C+servosAngle.C;
-        servosAngle.D= rightHand.defaultAngle.D+servosAngle.D;
         return servosAngle;
     }
+    
     ServosAngle runAnimLead_Leg(int frame){
-    ServosAngle    servosAngle = {0,0,0,0,0};
+    ServosAngle    servosAngle = {0,0};
 
         switch(frame){
             case 0: 
-                servosAngle = setAngle(5,15,-5,0,0);
+                servosAngle = setAngle(0,15,-5,0,0);
                 break;
             case 1: 
                 servosAngle = setAngle(0,0,0,0,0);
                 break;
         }
-        servosAngle.A= leftLeg.defaultAngle.A+servosAngle.A;
         servosAngle.B= leftLeg.defaultAngle.B+servosAngle.B;
         servosAngle.C= leftLeg.defaultAngle.C+servosAngle.C;
-        servosAngle.D= leftLeg.defaultAngle.D+servosAngle.D;
         return servosAngle;
     }
+    
     ServosAngle runAnimSupport_Leg(int frame){
-    ServosAngle    servosAngle = {0,0,0,0,0};
+    ServosAngle    servosAngle = {0,0};
 
         switch(frame){
             case 0: 
-                servosAngle = setAngle(5,-5,20,0,0);
+                servosAngle = setAngle(0,-5,20,0,0);
                 break;
             case 1: 
                 servosAngle = setAngle(0,0,0,0,0);
                 break;
         }
-        servosAngle.A= rightLeg.defaultAngle.A+servosAngle.A;
         servosAngle.B= rightLeg.defaultAngle.B+servosAngle.B;
         servosAngle.C= rightLeg.defaultAngle.C+servosAngle.C;
-        servosAngle.D= rightLeg.defaultAngle.D+servosAngle.D;
         return servosAngle;
     }
-
 
     /*spin animation*/
     ServosAngle spinAnimLead_Hand(int frame){
-    ServosAngle    servosAngle = {0,0,0,0,0};
+    ServosAngle    servosAngle = {0,0};
 
         switch(frame){
             case 0: 
@@ -1194,14 +1080,13 @@ void StartMotorControlTask(void *argument);
                 servosAngle = setAngle(0,0,0,0,0);
                 break;
         }
-        servosAngle.A= leftHand.defaultAngle.A+servosAngle.A;
         servosAngle.B= leftHand.defaultAngle.B+servosAngle.B;
         servosAngle.C= leftHand.defaultAngle.C+servosAngle.C;
-        servosAngle.D= leftHand.defaultAngle.D+servosAngle.D;
         return servosAngle;
     }
+    
     ServosAngle spinAnimSupport_Hand(int frame){
-    ServosAngle    servosAngle = {0,0,0,0,0};
+    ServosAngle    servosAngle = {0,0};
 
         switch(frame){
             case 0: 
@@ -1211,55 +1096,47 @@ void StartMotorControlTask(void *argument);
                 servosAngle = setAngle(0,0,0,0,0);
                 break;
         }
-        servosAngle.A= rightHand.defaultAngle.A+servosAngle.A;
         servosAngle.B= rightHand.defaultAngle.B+servosAngle.B;
         servosAngle.C= rightHand.defaultAngle.C+servosAngle.C;
-        servosAngle.D= rightHand.defaultAngle.D+servosAngle.D;
         return servosAngle;
     }
-
 
     /*box animation*/
     ServosAngle boxAnimLead_Hand(int frame){
-    ServosAngle    servosAngle = {0,0,0,0,0};
+    ServosAngle    servosAngle = {0,0};
 
         switch(frame){
             case 0: 
-                servosAngle = setAngle(-62,10,60,0,0);
+                servosAngle = setAngle(0,-62,60,0,0);
                 break;
             case 1: 
-                servosAngle = setAngle(40,10,-30,0,0);
+                servosAngle = setAngle(0,40,-30,0,0);
                 break;
         }
-        servosAngle.A= leftHand.defaultAngle.A+servosAngle.A;
         servosAngle.B= leftHand.defaultAngle.B+servosAngle.B;
         servosAngle.C= leftHand.defaultAngle.C+servosAngle.C;
-        servosAngle.D= leftHand.defaultAngle.D+servosAngle.D;
         return servosAngle;
     }
+    
     ServosAngle boxAnimSupport_Hand(int frame){
-
-    ServosAngle    servosAngle = {0,0,0,0,0};
+    ServosAngle    servosAngle = {0,0};
 
         switch(frame){
             case 0: 
-                servosAngle = setAngle(50,0,-40,0,0);
+                servosAngle = setAngle(0,50,-40,0,0);
                 break;
             case 1: 
-                servosAngle = setAngle(-65,5,65,0,0);
+                servosAngle = setAngle(0,-65,65,0,0);
                 break;
         }
-        servosAngle.A= rightHand.defaultAngle.A+servosAngle.A;
         servosAngle.B= rightHand.defaultAngle.B+servosAngle.B;
         servosAngle.C= rightHand.defaultAngle.C+servosAngle.C;
-        servosAngle.D= rightHand.defaultAngle.D+servosAngle.D;
         return servosAngle;
     }
 
-        
     /*dance animation*/
     ServosAngle danceAnimLead_Hand(int frame){
-    ServosAngle    servosAngle = {0,0,0,0,0};
+    ServosAngle    servosAngle = {0,0};
 
         switch(frame){
             case 0:
@@ -1277,13 +1154,13 @@ void StartMotorControlTask(void *argument);
                 servosAngle = setAngle(0,-75,90,0,0);
                 break;
             case 6:
-                servosAngle = setAngle(-90,0,70,0,0);
+                servosAngle = setAngle(0,-90,70,0,0);
                 break;
             case 7:
-                servosAngle = setAngle(5,15,-5,0,0);
+                servosAngle = setAngle(0,5,-5,0,0);
                 break;
             case 8:
-                servosAngle = setAngle(-90,-75,70,0,0);
+                servosAngle = setAngle(0,-90,70,0,0);
                 break;
             case 9:
                 servosAngle = setAngle(0,0,0,0,0);
@@ -1292,14 +1169,13 @@ void StartMotorControlTask(void *argument);
                 servosAngle = setAngle(0,0,0,0,0);
                 break;
         }
-        servosAngle.A= leftHand.defaultAngle.A+servosAngle.A;
         servosAngle.B= leftHand.defaultAngle.B+servosAngle.B;
         servosAngle.C= leftHand.defaultAngle.C+servosAngle.C;
-        servosAngle.D= leftHand.defaultAngle.D+servosAngle.D;
         return servosAngle;
     }
+    
     ServosAngle danceAnimSupport_Hand(int frame){
-    ServosAngle    servosAngle = {0,0,0,0,0};
+    ServosAngle    servosAngle = {0,0};
 
         switch(frame){
             case 0:
@@ -1320,22 +1196,20 @@ void StartMotorControlTask(void *argument);
                 servosAngle = setAngle(0,0,0,0,0);
                 break;
             case 7:
-                servosAngle = setAngle(5,-5,20,0,0);
+                servosAngle = setAngle(0,5,20,0,0);
                 break;
             case 8:
                 servosAngle = setAngle(0,0,0,0,0);
                 break;
             case 9:
-                servosAngle = setAngle(-90,-75,70,0,0);
+                servosAngle = setAngle(0,-90,70,0,0);
                 break;
             case 10:
                 servosAngle = setAngle(0,0,0,0,0);
                 break;
         }
-        servosAngle.A= rightHand.defaultAngle.A+servosAngle.A;
         servosAngle.B= rightHand.defaultAngle.B+servosAngle.B;
         servosAngle.C= rightHand.defaultAngle.C+servosAngle.C;
-        servosAngle.D= rightHand.defaultAngle.D+servosAngle.D;
         return servosAngle;
     }
 
@@ -1391,8 +1265,6 @@ int main(void)
   /* Init scheduler */
   osKernelInitialize();
   /* Create the mutex(es) */
-  /* creation of MPU6050Mutex */
-  MPU6050MutexHandle = osMutexNew(&MPU6050Mutex_attributes);
 
   /* creation of UARTDataMutex */
   UARTDataMutexHandle = osMutexNew(&UARTDataMutex_attributes);
@@ -1423,9 +1295,6 @@ int main(void)
   /* Create the thread(s) */
   /* creation of defaultTask */
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
-
-  /* creation of MPU5060ReadTask */
-  MPU5060ReadTaskHandle = osThreadNew(StartMPU5060ReadTask, NULL, &MPU5060ReadTask_attributes);
 
   /* creation of ServoControlTas */
   ServoControlTasHandle = osThreadNew(StartServoControlTask, NULL, &ServoControlTas_attributes);
@@ -2000,7 +1869,7 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-    // Callback Input Capture ??? TIM3 Channel 1
+    // Input Capture callback for TIM3 Channel 1
     void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
     {
             if (htim->Instance == TIM3 && htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1)
@@ -2050,60 +1919,6 @@ void StartDefaultTask(void *argument)
   /* USER CODE END 5 */
 }
 
-/* USER CODE BEGIN Header_StartMPU5060ReadTask */
-    /**
-    * @brief Function implementing the MPU5060ReadTask thread.
-    * @param argument: Not used
-    * @retval None
-    */
-/* USER CODE END Header_StartMPU5060ReadTask */
-void StartMPU5060ReadTask(void *argument)
-{
-  /* USER CODE BEGIN StartMPU5060ReadTask */
-
-        uint8_t status = HAL_I2C_Mem_Read(&hi2c2, firstAddressMPU6050, HTU21D_Temp_Cmd, I2C_MEMADD_SIZE_8BIT, (uint8_t*) HTU21D_RX_Data, 2,1000);
-        if(status != HAL_OK)
-        {
-                 I2C_ClearBusyFlagErratum(&hi2c2, GPIOF, GPIOF, GPIO_PIN_0, GPIO_PIN_1, 1000);
-        }
-
-        while (MPU6050_Init(firstAddressMPU6050, &hi2c2) == 1){};
-        int timetest = 0;
-        float servoAngleLastData[6];
-        /* Infinite loop */
-        for(;;)
-        {
-            MPU6050_Read_All(firstAddressMPU6050, &hi2c2, &LeftLegGyroData);
-            HAL_Delay(2);
-            osMutexAcquire(MPU6050MutexHandle, osWaitForever);
-            if (timetest == 2) {
-                
-                
-                servoAngleChange[0][0] = (servoAngleChange[0][0] + (LeftLegGyroData.KalmanOldDataX - LeftLegGyroData.KalmanAngleX))/2;
-                servoAngleChange[1][0] = (servoAngleChange[1][0] + (LeftLegGyroData.KalmanOldDataY - LeftLegGyroData.KalmanAngleY))/2;
-                servoAngleChange[2][0] = (servoAngleChange[2][0] + (BodyGyroData.KalmanOldDataX - BodyGyroData.KalmanAngleX))/2;
-                servoAngleChange[3][0] = (servoAngleChange[3][0] + (BodyGyroData.KalmanOldDataY - BodyGyroData.KalmanAngleY))/2;
-                servoAngleChange[4][0] = (servoAngleChange[4][0] + (RightLegGyroData.KalmanOldDataX - RightLegGyroData.KalmanAngleX))/2;
-                servoAngleChange[5][0] = (servoAngleChange[5][0] + (RightLegGyroData.KalmanOldDataY - RightLegGyroData.KalmanAngleY))/2;
-            
-                LeftLegGyroData.KalmanOldDataX = LeftLegGyroData.KalmanAngleX;
-                LeftLegGyroData.KalmanOldDataY = LeftLegGyroData.KalmanAngleY;
-                BodyGyroData.KalmanOldDataX = BodyGyroData.KalmanAngleX;
-                BodyGyroData.KalmanOldDataY = BodyGyroData.KalmanAngleY;
-                RightLegGyroData.KalmanOldDataX = RightLegGyroData.KalmanAngleX;
-                RightLegGyroData.KalmanOldDataY = RightLegGyroData.KalmanAngleY;
-                timetest = 0;
-            }
-            else
-                timetest++;
-            osMutexRelease(MPU6050MutexHandle);
-            
-            
-            osDelay(1); 
-        }
-  /* USER CODE END StartMPU5060ReadTask */
-}
-
 /* USER CODE BEGIN Header_StartServoControlTask */
     /**
     * @brief Function implementing the ServoControlTas thread.
@@ -2115,36 +1930,22 @@ void StartServoControlTask(void *argument)
 {
   /* USER CODE BEGIN StartServoControlTask */
             bool legSwitch = false;
-            /* Setting initial parameters */
 
-        // Setting default angles for the left leg servos
-        // leftLeg.defaultAngle = setAngle(94,105,70,90,90);
         leftLeg.defaultAngle = setAngle(87,100,120,90,90);
         leftLeg.currentAngle = leftLeg.defaultAngle;
         ServosAngle resultLeft = leftLeg.defaultAngle;
 
-        // Setting default angles for the right leg servos
-        // rightLeg.defaultAngle = setAngle(97,84,90,89,90);
         rightLeg.defaultAngle = setAngle(104,80,95,90,90);
         rightLeg.currentAngle = rightLeg.defaultAngle;
         ServosAngle resultRight = rightLeg.defaultAngle;
 
-        // Initializing the PCA9685 for controlling the lower servos
         pca9685_leg.pca9685_i2c = &hi2c1;
         pca9685_leg.PCA9685_ADDRESS = PCA9685_ADDRESS2;
 
-        uint8_t status = HAL_I2C_Mem_Read(pca9685_leg.pca9685_i2c, pca9685_leg.PCA9685_ADDRESS, PCA9685_MODE1, I2C_MEMADD_SIZE_8BIT, (uint8_t*) HTU21D_RX_Data, 2, 1000);
-        if (status != HAL_OK) {
-                I2C_ClearBusyFlagErratum(pca9685_leg.pca9685_i2c, GPIOB, GPIOB, GPIO_PIN_6, GPIO_PIN_7, 1000);
-        }
-
         while (PCA9685_Init(pca9685_leg) == 1) {};
 
-        // Rotating servos to default values
         allServoLegSpin(pca9685_leg, 20, leftLeg.defaultAngle, rightLeg.defaultAngle, 0);
-            
         
-        /* Infinite loop */
         for(;;)
         {
             degree90State = HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_12);
@@ -2159,38 +1960,19 @@ void StartServoControlTask(void *argument)
                     main_mode = 1;
                 }
             if(main_mode==1)    
-            switch(state){
+            {
+                int current_state = state;
+                switch(current_state){
                 case 10:
-                    /*--------------90 degrees-----------------------------------------------*/
                     PCA9685_SetServoAngle(pca9685_leg,10, 90);
                 break;
                 case 6:
-                    /*--------------Default pose-----------------------------------------------*/
-
                     allServoLegSpin(pca9685_leg,20,leftLeg.defaultAngle,rightLeg.defaultAngle,0);
                 break;
                 case 1:
-                    /*if(turnLeft==0 && turnRight==0){
-                        resultLeft = runAnimLead_Leg(0);
-                        resultRight = runAnimSupport_Leg(0);
-
-                        int movementSpeed = 20;
-                        int maxAngleLeft = getMaxAngle(leftLeg.currentAngle,resultLeft);
-                        int maxAngleRight = getMaxAngle(rightLeg.currentAngle,resultRight);
-                        int maxAngle = maxAngleLeft>maxAngleRight ? maxAngleLeft : maxAngleRight;
-                        ServosAngle startLeftAngle = leftLeg.currentAngle;
-                        ServosAngle startRightAngle = rightLeg.currentAngle;
-                        for(int i =1;i<=maxAngle;i++){
-                            leftLeg.currentAngle = getNextStepAll(startLeftAngle,resultLeft,maxAngle,i);
-                            rightLeg.currentAngle = getNextStepAll(startRightAngle,resultRight,maxAngle,i);
-                            allServoLegSpin(pca9685_leg,movementSpeed,leftLeg.currentAngle,rightLeg.currentAngle,0);
-                        }
-                    }*/
-                    //allServoLegSpin(pca9685_leg,20,leftLeg.defaultAngle,rightLeg.defaultAngle,0);
                 break;                
                 
                 case 2:    {
-        /*----------------nodding animation---------------------------------------*/
                     if (hold3mod == 2){
                         for(int j = 0;j<4;j++){
                             for (int i = 0; i < 2; i++) {
@@ -2211,38 +1993,40 @@ void StartServoControlTask(void *argument)
                                 }
                             }
                         }
+                        osMutexAcquire(UARTDataMutexHandle, osWaitForever);
                         state=6;
+                        osMutexRelease(UARTDataMutexHandle);
                     }
                 break;
                 }            
 
                 case 3:    {    
-    /*----------------Animation: Head Nodding---------------------------------------*/
                     if (hold10mod == 1 || hold10mod == 2) {
-                            for (int i = 0; i < 2; i++) { // Loop through the number of frames (2 frames)
-                                    resultLeft = hold10Anim1Lead_Leg(i); // Get the next angle for the left leg in the current animation
-                                    resultRight = hold10Anim1Support_Leg(i); // Get the next angle for the right leg in the current animation
-                                    int movementSpeed = 60; // Set the movement speed
-                                    int maxAngleLeft = getMaxAngle(leftLeg.currentAngle, resultLeft); // Calculate the maximum deviation angle for the left leg
-                                    int maxAngleRight = getMaxAngle(rightLeg.currentAngle, resultRight); // Calculate the maximum deviation angle for the right leg
-                                    int maxAngle = maxAngleLeft > maxAngleRight ? maxAngleLeft : maxAngleRight; // Compare the values and choose the maximum
+                            for (int i = 0; i < 2; i++) {
+                                    resultLeft = hold10Anim1Lead_Leg(i);
+                                    resultRight = hold10Anim1Support_Leg(i);
+                                    int movementSpeed = 60;
+                                    int maxAngleLeft = getMaxAngle(leftLeg.currentAngle, resultLeft);
+                                    int maxAngleRight = getMaxAngle(rightLeg.currentAngle, resultRight);
+                                    int maxAngle = maxAngleLeft > maxAngleRight ? maxAngleLeft : maxAngleRight;
 
-                                    ServosAngle startLeftAngle = leftLeg.currentAngle; // Store the current angles of the left leg
-                                    ServosAngle startRightAngle = rightLeg.currentAngle; // Store the current angles of the right leg
+                                    ServosAngle startLeftAngle = leftLeg.currentAngle;
+                                    ServosAngle startRightAngle = rightLeg.currentAngle;
 
-                                    for (int i = 1; i <= maxAngle; i++) { // Loop through the number of angle steps
-                                            leftLeg.currentAngle = getNextStepAll(startLeftAngle, resultLeft, maxAngle, i); // Get the new angle for the left leg
-                                            rightLeg.currentAngle = getNextStepAll(startRightAngle, resultRight, maxAngle, i); // Get the new angle for the right leg
-                                            allServoLegSpin(pca9685_leg, movementSpeed, leftLeg.currentAngle, rightLeg.currentAngle, 0); // Rotate the servos to the new angles
+                                    for (int i = 1; i <= maxAngle; i++) {
+                                            leftLeg.currentAngle = getNextStepAll(startLeftAngle, resultLeft, maxAngle, i);
+                                            rightLeg.currentAngle = getNextStepAll(startRightAngle, resultRight, maxAngle, i);
+                                            allServoLegSpin(pca9685_leg, movementSpeed, leftLeg.currentAngle, rightLeg.currentAngle, 0);
                                     }
-                                    osDelay(4000); // Delay for 4000 milliseconds (4 seconds) to allow the movement to complete
+                                    osDelay(4000);
                             }
                     }
+                    osMutexAcquire(UARTDataMutexHandle, osWaitForever);
                     state=6;
+                    osMutexRelease(UARTDataMutexHandle);
                 break;
                 }
                 case 7:    {    
-                /*-------------Head tilt up/down--------------------------*/
                     if((leftLeg.defaultAngle.C>(20-headDir)    && leftLeg.defaultAngle.C<(160-headDir)) &&(rightLeg.defaultAngle.C>(20-headDir)    && rightLeg.defaultAngle.C<(160-headDir))){
                         leftLeg.defaultAngle.C+=headDir;
                         rightLeg.defaultAngle.C+=headDir;
@@ -2252,52 +2036,57 @@ void StartServoControlTask(void *argument)
                 break;
                 }
                 case 8:    {    
-                    /*----------------calibration------------------------------------------*/
-                    int maxAngleLeft = getMaxAngle(leftLeg.currentAngle, leftLeg.calibrationAngle); // Calculate the maximum deviation angle for the left leg
-                    int maxAngleRight = getMaxAngle(rightLeg.currentAngle, rightLeg.calibrationAngle); // Calculate the maximum deviation angle for the right leg
-                    int maxAngle = maxAngleLeft > maxAngleRight ? maxAngleLeft : maxAngleRight; // Compare the values and choose the maximum
+                    int maxAngleLeft = getMaxAngle(leftLeg.currentAngle, leftLeg.calibrationAngle);
+                    int maxAngleRight = getMaxAngle(rightLeg.currentAngle, rightLeg.calibrationAngle);
+                    int maxAngle = maxAngleLeft > maxAngleRight ? maxAngleLeft : maxAngleRight;
 
-                    ServosAngle startLeftAngle = leftLeg.currentAngle; // Store the current angles of the left leg
-                    ServosAngle startRightAngle = rightLeg.currentAngle; // Store the current angles of the right leg
+                    ServosAngle startLeftAngle = leftLeg.currentAngle;
+                    ServosAngle startRightAngle = rightLeg.currentAngle;
 
-                    for (int i = 1; i <= maxAngle; i++) { // Loop through the number of angle steps
-                            leftLeg.currentAngle = getNextStepAll(startLeftAngle, leftLeg.calibrationAngle, maxAngle, i); // Get the new angle for the left leg
-                            rightLeg.currentAngle = getNextStepAll(startRightAngle, rightLeg.calibrationAngle, maxAngle, i); // Get the new angle for the right leg
-                            allServoLegSpin(pca9685_leg, 60, leftLeg.currentAngle, rightLeg.currentAngle, 0); // Rotate the servos to the new angles
+                    for (int i = 1; i <= maxAngle; i++) {
+                            leftLeg.currentAngle = getNextStepAll(startLeftAngle, leftLeg.calibrationAngle, maxAngle, i);
+                            rightLeg.currentAngle = getNextStepAll(startRightAngle, rightLeg.calibrationAngle, maxAngle, i);
+                            allServoLegSpin(pca9685_leg, 60, leftLeg.currentAngle, rightLeg.currentAngle, 0);
                     }
-                    //allServoLegSpin(pca9685_leg,400,leftLeg.calibrationAngle, rightLeg.calibrationAngle,0);
                 break;
                 }    
                 case 9: {
-                    
-                /*----------------loading default values ??from the server via UART when the hut starts working----------------------------*/
                     osMutexAcquire(UARTDataMutexHandle, osWaitForever);
-                    leftLeg.calibrationAngle.A =
-                    calibrationAngles[0];
                     leftLeg.calibrationAngle.B = calibrationAngles[1];
                     leftLeg.calibrationAngle.C = calibrationAngles[2];
-                    leftLeg.calibrationAngle.D = calibrationAngles[3];
-                    leftLeg.calibrationAngle.E = calibrationAngles[4];
                 
-                    leftLeg.defaultAngle=leftLeg.calibrationAngle;
-                    leftLeg.currentAngle=leftLeg.calibrationAngle;
+                    leftLeg.defaultAngle.B = leftLeg.calibrationAngle.B;
+                    leftLeg.defaultAngle.C = leftLeg.calibrationAngle.C;
+                    leftLeg.currentAngle.B = leftLeg.calibrationAngle.B;
+                    leftLeg.currentAngle.C = leftLeg.calibrationAngle.C;
 
-                    rightLeg.calibrationAngle.A = calibrationAngles[5];
                     rightLeg.calibrationAngle.B = calibrationAngles[6];
                     rightLeg.calibrationAngle.C = calibrationAngles[7];
-                    rightLeg.calibrationAngle.D = calibrationAngles[8];
-                    rightLeg.calibrationAngle.E = calibrationAngles[9];
 
-                    rightLeg.defaultAngle=rightLeg.calibrationAngle;
-                    rightLeg.currentAngle=rightLeg.calibrationAngle;
+                    rightLeg.defaultAngle.B = rightLeg.calibrationAngle.B;
+                    rightLeg.defaultAngle.C = rightLeg.calibrationAngle.C;
+                    rightLeg.currentAngle.B = rightLeg.calibrationAngle.B;
+                    rightLeg.currentAngle.C = rightLeg.calibrationAngle.C;
                     
-                    osMutexRelease(UARTDataMutexHandle);
                     state = 6;
+                    osMutexRelease(UARTDataMutexHandle);
                 break;
             }
-
+            }
         }
             osDelay(1);
+            
+            static int error_counter_local = 0;	
+            if(rightLeg.currentAngle.C > 160 || rightLeg.currentAngle.C < 20) {
+                error_counter_local++;
+                if(error_counter_local > 10) {
+                    PCA9685_ResetAllChannels(pca9685_leg);
+                    allServoLegSpin(pca9685_leg,20,leftLeg.defaultAngle,rightLeg.defaultAngle,0);
+                    error_counter_local = 0;
+                }
+            } else {
+                error_counter_local = 0;
+            }
         }
   /* USER CODE END StartServoControlTask */
 }
@@ -2345,33 +2134,45 @@ void StartUARTTask(void *argument)
                     {
                             // Handling the ultrasonic sensor command
                             if (strcmp(parametr, "CMD_SONIC") == 0) {
-                                    char buffer[4];
-                                    //int dist = getDistance();  // Get distance from the ultrasonic sensor
-                                    //sprintf(buffer, "%d", dist);  // Format the distance into a string
-                                    //strcat(buffer, "\n");  // Append newline
+                                    char buffer[10];
+                                    sprintf(buffer, "%.2f\n", distance);
                                     if (queue_message == 1 && huart1.gState == HAL_UART_STATE_READY) {  // If the port is free and the message queue is ready
-                                            HAL_UART_Transmit_DMA(&huart1, (uint8_t *)buffer, 4);  // Send the distance via UART
+                                            HAL_UART_Transmit_DMA(&huart1, (uint8_t *)buffer, strlen(buffer));
                                     }
                             }
                             if (strcmp(parametr, "CMD_SENSORS") == 0) {
                                     char* data = getSensorInfo();  // Get sensors data
-                                    uint8_t c2[50];
-                                    memcpy(c2, data, strlen(data) + 1);
                                     if (queue_message == 1 && huart1.gState == HAL_UART_STATE_READY) {  // If the port is free and the message queue is ready
-                                            int size = sizeof(c2)/sizeof(uint8_t);
-                                            HAL_UART_Transmit_DMA(&huart1, c2,strlen(data) + 1);  // Send the distance via UART
+                                            HAL_UART_Transmit_DMA(&huart1, (uint8_t*)data, strlen(data));
                                     }
                             }
                             if (strcmp(parametr, "CMD_LIGHT") == 0) {
-                                parametr = strtok(NULL, parameterSep);  // Extract red parameter
-                                    int red = atoi(parametr);
+										int red = 0, green = 0, blue = 0;
+										parametr = strtok(NULL, parameterSep);  // Extract red parameter
+                                    if (parametr) red = atoi(parametr);
                                     parametr = strtok(NULL, parameterSep);  // Extract green parameter
-                                    int green = atoi(parametr);
+                                    if (parametr) green = atoi(parametr);
                                     parametr = strtok(NULL, parameterSep);  // Extract blue parameter
-                                    int blue = atoi(parametr);  // Convert angle to integer
-                                    HAL_GPIO_WritePin(GPIOG,GPIO_PIN_13,red);
-                                    HAL_GPIO_WritePin(GPIOG,GPIO_PIN_14,green);
-                                    HAL_GPIO_WritePin(GPIOG,GPIO_PIN_15,blue);
+                                    if (parametr) blue = atoi(parametr);  // Convert angle to integer
+										red = constrain (red,0,255);
+										green = constrain (green,0,255);
+										blue = constrain (blue,0,255);
+                                                   
+										if (red > 127) 
+												HAL_GPIO_WritePin(GPIOG, GPIO_PIN_13, GPIO_PIN_SET);
+										else 
+												HAL_GPIO_WritePin(GPIOG, GPIO_PIN_13, GPIO_PIN_RESET);
+
+										
+										if (green > 127) 
+												HAL_GPIO_WritePin(GPIOG, GPIO_PIN_14, GPIO_PIN_SET);
+										else 
+												HAL_GPIO_WritePin(GPIOG, GPIO_PIN_14, GPIO_PIN_RESET);
+
+										if (blue > 127) 
+												HAL_GPIO_WritePin(GPIOG, GPIO_PIN_15, GPIO_PIN_SET);
+										else 
+												HAL_GPIO_WritePin(GPIOG, GPIO_PIN_15, GPIO_PIN_RESET);
                             }
                             // Handling the "ping" command
                             else if (strcmp(parametr, "CMD_PING") == 0) {
@@ -2396,147 +2197,151 @@ void StartUARTTask(void *argument)
                                     parametr = strtok(NULL, parameterSep);  // Extract the mode parameter
                                     int mod = atoi(parametr);
                                     if (mod == 1) {
-                                            state = 8;  // Set to calibration mode
+                                            osMutexAcquire(UARTDataMutexHandle, osWaitForever);
+                                            state = 8;
+                                            osMutexRelease(UARTDataMutexHandle);
                                     } else if (mod == 0) {
                                             // Save default angles for all servos
                                             saveNewDefoultAngle(&leftLeg);
                                             saveNewDefoultAngle(&rightLeg);
                                             saveNewDefoultAngle(&leftHand);
                                             saveNewDefoultAngle(&rightHand);
-                                            state = 6;  // Set to idle state
+                                            osMutexAcquire(UARTDataMutexHandle, osWaitForever);
+                                            state = 6;
+                                            osMutexRelease(UARTDataMutexHandle);
                                     }
                             }
                             // Handling all servos default calibration command
                             else if (strcmp(parametr, "CMD_CALIBRATION_ALL") == 0) {
-                                    osMutexAcquire(UARTDataMutexHandle, osWaitForever);  // Acquire mutex
-                                    for (int i = 0; i < SERVO_COUNT; i++) {  // Iterate over all servos
-                                            parametr = strtok(NULL, parameterSep);  // Extract calibration angle
-                                            calibrationAngles[i] = atoi(parametr);  // Store the angle
+                                    osMutexAcquire(UARTDataMutexHandle, osWaitForever);
+                                    for (int i = 0; i < SERVO_COUNT; i++) {
+                                            parametr = strtok(NULL, parameterSep);
+                                            if(parametr) calibrationAngles[i] = atoi(parametr);
                                     }
-                                    osMutexRelease(UARTDataMutexHandle);  // Release mutex
-                                    state = 9;  // Switch to calibration mode
+                                    state = 9;
+                                    osMutexRelease(UARTDataMutexHandle);
                             }
                             // Handling movement forward command
                             else if (strcmp(parametr, "CMD_MOVE_FORWARD") == 0) {
-                                    osMutexAcquire(UARTDataMutexHandle, osWaitForever);  // Acquire mutex
-                                    state = 1;  // Set to moving state
+                                    osMutexAcquire(UARTDataMutexHandle, osWaitForever);
+                                    state = 1;
                                     turnLeft = 1;
                                     turnRight = 1;
-                                    osMutexRelease(UARTDataMutexHandle);  // Release mutex
+                                    osMutexRelease(UARTDataMutexHandle);
                             }
                             // Handling movement backward command
                             else if (strcmp(parametr, "CMD_MOVE_BACKWARD") == 0) {
-                                    osMutexAcquire(UARTDataMutexHandle, osWaitForever);  // Acquire mutex
-                                    state = 1;  // Set to moving state
+                                    osMutexAcquire(UARTDataMutexHandle, osWaitForever);
+                                    state = 1;
                                     turnLeft = 0;
                                     turnRight = 0;
-                                    osMutexRelease(UARTDataMutexHandle);  // Release mutex
+                                    osMutexRelease(UARTDataMutexHandle);
                             }
                             // Handling movement left command
                             else if (strcmp(parametr, "CMD_MOVE_LEFT") == 0) {
-                                    osMutexAcquire(UARTDataMutexHandle, osWaitForever);  // Acquire mutex
-                                    state = 1;  // Set to moving state
+                                    osMutexAcquire(UARTDataMutexHandle, osWaitForever);
+                                    state = 1;
                                     turnLeft = 1;
                                     turnRight = 0;
-                                    osMutexRelease(UARTDataMutexHandle);  // Release mutex
+                                    osMutexRelease(UARTDataMutexHandle);
                             }
                             // Handling movement right command
                             else if (strcmp(parametr, "CMD_MOVE_RIGHT") == 0) {
-                                    osMutexAcquire(UARTDataMutexHandle, osWaitForever);  // Acquire mutex
-                                    state = 1;  // Set to moving state
+                                    osMutexAcquire(UARTDataMutexHandle, osWaitForever);
+                                    state = 1;
                                     turnLeft = 0;
                                     turnRight = 1;
-                                    osMutexRelease(UARTDataMutexHandle);  // Release mutex
+                                    osMutexRelease(UARTDataMutexHandle);
                             }
                             // Handling stop movement command
                             else if (strcmp(parametr, "CMD_MOVE_STOP") == 0) {
-                                    osMutexAcquire(UARTDataMutexHandle, osWaitForever);  // Acquire mutex
-                                    state = 6;  // Set to idle state
+                                    osMutexAcquire(UARTDataMutexHandle, osWaitForever);
+                                    state = 6;
                                     turnLeft = 1;
                                     turnRight = 1;
-                                    osMutexRelease(UARTDataMutexHandle);  // Release mutex
+                                    osMutexRelease(UARTDataMutexHandle);
                             }
                             // Handling command to clench right hand
                             else if (strcmp(parametr, "CMD_CLENCH_RIGHT") == 0) {
-                                    parametr = strtok(NULL, parameterSep);  // Extract next parameter
-                                    osMutexAcquire(UARTDataMutexHandle, osWaitForever);  // Acquire mutex
-                                    clenchRight = 1;  // Set right hand to clenched
-                                    osMutexRelease(UARTDataMutexHandle);  // Release mutex
+                                    parametr = strtok(NULL, parameterSep);
+                                    osMutexAcquire(UARTDataMutexHandle, osWaitForever);
+                                    clenchRight = 1;
+                                    osMutexRelease(UARTDataMutexHandle);
                             }
                             // Handling command to clench left hand
                             else if (strcmp(parametr, "CMD_CLENCH_LEFT") == 0) {
-                                    osMutexAcquire(UARTDataMutexHandle, osWaitForever);  // Acquire mutex
-                                    clenchLeft = 1;  // Set left hand to clenched
-                                    osMutexRelease(UARTDataMutexHandle);  // Release mutex
+                                    osMutexAcquire(UARTDataMutexHandle, osWaitForever);
+                                    clenchLeft = 1;
+                                    osMutexRelease(UARTDataMutexHandle);
                             }
                             // Handling command to look up
                             else if (strcmp(parametr, "CMD_LOOK_UP") == 0) {
-                                    osMutexAcquire(UARTDataMutexHandle, osWaitForever);  // Acquire mutex
-                                    state = 7;  // Set to looking state
-                                    headDir = -1;  // Look up
-                                    osMutexRelease(UARTDataMutexHandle);  // Release mutex
+                                    osMutexAcquire(UARTDataMutexHandle, osWaitForever);
+                                    state = 7;
+                                    headDir = -1;
+                                    osMutexRelease(UARTDataMutexHandle);
                             }
                             // Handling command to look down
                             else if (strcmp(parametr, "CMD_LOOK_DOWN") == 0) {
-                                    osMutexAcquire(UARTDataMutexHandle, osWaitForever);  // Acquire mutex
-                                    state = 7;  // Set to looking state
-                                    headDir = 1;  // Look down
-                                    osMutexRelease(UARTDataMutexHandle);  // Release mutex
+                                    osMutexAcquire(UARTDataMutexHandle, osWaitForever);
+                                    state = 7;
+                                    headDir = 1;
+                                    osMutexRelease(UARTDataMutexHandle);
                             }
                             // Handling command to stop looking
                             else if (strcmp(parametr, "CMD_LOOK_STOP") == 0) {
-                                    osMutexAcquire(UARTDataMutexHandle, osWaitForever);  // Acquire mutex
-                                    state = 6;  // Set to idle state
-                                    headDir = 0;  // Stop looking
-                                    osMutexRelease(UARTDataMutexHandle);  // Release mutex
+                                    osMutexAcquire(UARTDataMutexHandle, osWaitForever);
+                                    state = 6;
+                                    headDir = 0;
+                                    osMutexRelease(UARTDataMutexHandle);
                             }
                             // Handling the 3-minute hold animation
                             else if (strcmp(parametr, "CMD_HOLD_3") == 0) {
-                                    parametr = strtok(NULL, parameterSep);  // Extract the parameter
-                                    osMutexAcquire(UARTDataMutexHandle, osWaitForever);  // Acquire mutex
-                                    hold3mod = atoi(parametr);  // Set hold animation mode
-                                    state = 2;  // Set to hold state
-                                    osMutexRelease(UARTDataMutexHandle);  // Release mutex
+                                    parametr = strtok(NULL, parameterSep);
+                                    osMutexAcquire(UARTDataMutexHandle, osWaitForever);
+                                    hold3mod = atoi(parametr);
+                                    state = 2;
+                                    osMutexRelease(UARTDataMutexHandle);
                             }
                             // Handling the 10-minute hold animation
                             else if (strcmp(parametr, "CMD_HOLD_10") == 0) {
-                                    parametr = strtok(NULL, parameterSep);  // Extract the parameter
-                                    osMutexAcquire(UARTDataMutexHandle, osWaitForever);  // Acquire mutex
-                                    hold10mod = atoi(parametr);  // Set hold animation mode
-                                    state = 3;  // Set to hold state
-                                    osMutexRelease(UARTDataMutexHandle);  // Release mutex
+                                    parametr = strtok(NULL, parameterSep);
+                                    osMutexAcquire(UARTDataMutexHandle, osWaitForever);
+                                    hold10mod = atoi(parametr);
+                                    state = 3;
+                                    osMutexRelease(UARTDataMutexHandle);
                             }
                             // Handling hands-up command
                             else if (strcmp(parametr, "CMD_HANDS_UP") == 0) {
-                                    osMutexAcquire(UARTDataMutexHandle, osWaitForever);  // Acquire mutex
-                                    state = 5;  // Set to hands up state
-                                    osMutexRelease(UARTDataMutexHandle);  // Release mutex
+                                    osMutexAcquire(UARTDataMutexHandle, osWaitForever);
+                                    state = 5;
+                                    osMutexRelease(UARTDataMutexHandle);
                             }
                             // Box animation
                             else if (strcmp(parametr, "CMD_BOX") == 0) {
-                                    osMutexAcquire(UARTDataMutexHandle, osWaitForever);  // Acquire mutex
-                                    state = 11;  // Set to box state
-                                    osMutexRelease(UARTDataMutexHandle);  // Release mutex
+                                    osMutexAcquire(UARTDataMutexHandle, osWaitForever);
+                                    state = 11;
+                                    osMutexRelease(UARTDataMutexHandle);
                             }
                             // dance animation
                             else if (strcmp(parametr, "CMD_DANCE") == 0) {
-                                    osMutexAcquire(UARTDataMutexHandle, osWaitForever);  // Acquire mutex
-                                    state = 12;  // Set to dance state
-                                    osMutexRelease(UARTDataMutexHandle);  // Release mutex
+                                    osMutexAcquire(UARTDataMutexHandle, osWaitForever);
+                                    state = 12;
+                                    osMutexRelease(UARTDataMutexHandle);
                             }
 
-                            parametr = strtok(NULL, parameterSep);  // Reset the parameter to extract the next one
+                            parametr = strtok(NULL, parameterSep);
                     }
 
                     // Extract the next command
                     command = strtok(NULL, commandSep); 
             }
 
-            queue_message = 255;  // Set the next message queue status
-            memset(tx_buffer, 0, sizeof(uint8_t) * 100);  // Clear tx_buffer
-            } else if (flag_send == 1 && queue_message == 255) {  // If sending is allowed and the message queue is full
-            queue_message = 1;  // Reset the message queue to allow messages to be sent again
-            flag_send = 0;  // Disable message sending (it will be enabled again in an interrupt)
+            queue_message = 255;
+            memset(tx_buffer, 0, sizeof(uint8_t) * BUFFER_SIZE);
+            } else if (flag_send == 1 && queue_message == 255) {
+            queue_message = 1;
+            flag_send = 0;
             }
             osDelay(1);
         }
@@ -2554,115 +2359,95 @@ void StartHandServoControlTask(void *argument)
 {
   /* USER CODE BEGIN StartHandServoControlTask */
         bool legSwitch = false;
-        // Setting default angles for the left hand servos
+        
+        osDelay(500);
+        
         leftHand.defaultAngle = setAngle(90, 90, 90, 90, 90);
         leftHand.currentAngle = leftHand.defaultAngle;
         ServosAngle resultLeft = leftHand.defaultAngle;
 
-        // Setting default angles for the right hand servos
         rightHand.defaultAngle = setAngle(90, 90, 90, 90, 90);
         rightHand.currentAngle = rightHand.defaultAngle;
         ServosAngle resultRight = rightHand.defaultAngle;  
 
-        // Initializing the PCA9685 for controlling the upper servos
         pca9685_hand.pca9685_i2c = &hi2c3;
         pca9685_hand.PCA9685_ADDRESS = PCA9685_ADDRESS1;
 
-        while (PCA9685_Init(pca9685_hand) == 1) {};  // Wait until PCA9685 is initialized
-        // Rotate the servos to the default values
+        I2C_ClearBusyFlagErratum(&hi2c3, GPIOA, GPIOC, GPIO_PIN_8, GPIO_PIN_9, 1000);
+        osDelay(100);
+        
+        int init_attempts = 0;
+        while (PCA9685_Init(pca9685_hand) != 0 && init_attempts < 10) {
+            init_attempts++;
+            osDelay(50);
+        }
+        
+        PCA9685_ResetAllChannels(pca9685_hand);
+        osDelay(50);
+        
         allServoHandSpin(pca9685_hand, 20, leftHand.defaultAngle, rightHand.defaultAngle, 0);
-        /* Infinite loop */
+        
         for(;;)
         {
-            switch(state){
+            int current_state = state;
+            switch(current_state){
                 case 1:
-                    if(turnLeft==0 && turnRight==0){
-                        resultLeft = runAnimLead_Hand(0);
-                        resultRight = runAnimSupport_Hand(0);
-
-                        int movementSpeed = 5;
-                        int maxAngleLeft = getMaxAngle(leftHand.currentAngle,resultLeft);
-                        int maxAngleRight = getMaxAngle(rightHand.currentAngle,resultRight);
-                        int maxAngle = maxAngleLeft>maxAngleRight ? maxAngleLeft : maxAngleRight;
-                        ServosAngle startLeftAngle = leftHand.currentAngle;
-                        ServosAngle startRightAngle = rightHand.currentAngle;
-                        for(int i =1;i<=maxAngle;i++){
-                            leftHand.currentAngle = getNextStepAll(startLeftAngle,resultLeft,maxAngle,i);
-                            rightHand.currentAngle = getNextStepAll(startRightAngle,resultRight,maxAngle,i);
-                            allServoHandSpin(pca9685_hand,movementSpeed,leftHand.currentAngle,rightHand.currentAngle,0);
-                        }
-                        //allServoHandSpin(pca9685_hand,20,runAnimLead_Hand(0),runAnimSupport_Hand(0),0);
-                    }else if((turnLeft==1 && turnRight==0) || (turnLeft==0 && turnRight==1)){
-                        resultLeft = spinAnimLead_Hand(0);
-                        resultRight = spinAnimSupport_Hand(0);
-
-                        int movementSpeed = 5;
-                        int maxAngleLeft = getMaxAngle(leftHand.currentAngle,resultLeft);
-                        int maxAngleRight = getMaxAngle(rightHand.currentAngle,resultRight);
-                        int maxAngle = maxAngleLeft>maxAngleRight ? maxAngleLeft : maxAngleRight;
-                        ServosAngle startLeftAngle = leftHand.currentAngle;
-                        ServosAngle startRightAngle = rightHand.currentAngle;
-                        for(int i =1;i<=maxAngle;i++){
-                            leftHand.currentAngle = getNextStepAll(startLeftAngle,resultLeft,maxAngle,i);
-                            rightHand.currentAngle = getNextStepAll(startRightAngle,resultRight,maxAngle,i);
-                            allServoHandSpin(pca9685_hand,movementSpeed,leftHand.currentAngle,rightHand.currentAngle,0);
-                        }
-                    }
-                break;
-                case 10:
-                    /*--------------90 degrees-----------------------------------------------*/
-                    PCA9685_SetServoAngle(pca9685_hand,10, 90);
-                break;
-                case 6:
-                /*--------------Default pose------------------------------------------------------------------------------*/
-                    if(!targetPositionCheck(leftHand.defaultAngle,leftHand.currentAngle)){
-                        resultLeft = leftHand.defaultAngle; // Get the next angle for the left hand in the current animation
-                        resultRight = rightHand.defaultAngle; // Get the next angle for the right hand in the current animation
-                        int movementSpeed = 20; // Set the speed
-                        int maxAngleLeft = getMaxAngle(leftHand.currentAngle, resultLeft); // Calculate the maximum deviation angle for the left hand
-                        int maxAngleRight = getMaxAngle(rightHand.currentAngle, resultRight); // Calculate the maximum deviation angle for the right hand
-                        int maxAngle = maxAngleLeft > maxAngleRight ? maxAngleLeft : maxAngleRight; // Compare and choose the largest angle
-                        ServosAngle startLeftAngle = leftHand.currentAngle; // Store the current angle of the left hand
-                        ServosAngle startRightAngle = rightHand.currentAngle; // Store the current angle of the right hand
-                        
-                        for (int i = 1; i <= maxAngle; i++) { // Loop through the number of steps in the angle change
-                                leftHand.currentAngle = getNextStepAll(startLeftAngle, resultLeft, maxAngle, i); // Get the next angle for the left hand
-                                rightHand.currentAngle = getNextStepAll(startRightAngle, resultRight, maxAngle, i); // Get the next angle for the right hand
-                                allServoHandSpin(pca9685_hand, movementSpeed, leftHand.currentAngle, rightHand.currentAngle, 0); // Rotate to the specified angle
-                        }
-                    }
-                //allServoHandSpin(pca9685_hand,20,leftHand.defaultAngle,rightHand.defaultAngle,0);
                     
                 break;
+                
+                case 10:
+                    PCA9685_SetServoAngle(pca9685_hand,10, 90);
+                break;
+                
+                case 6:
+                    if(!targetPositionCheck(leftHand.defaultAngle,leftHand.currentAngle)){
+                        resultLeft = leftHand.defaultAngle;
+                        resultRight = rightHand.defaultAngle;
+                        int movementSpeed = 20;
+                        int maxAngleLeft = getMaxAngle(leftHand.currentAngle, resultLeft);
+                        int maxAngleRight = getMaxAngle(rightHand.currentAngle, resultRight);
+                        int maxAngle = maxAngleLeft > maxAngleRight ? maxAngleLeft : maxAngleRight;
+                        ServosAngle startLeftAngle = leftHand.currentAngle;
+                        ServosAngle startRightAngle = rightHand.currentAngle;
+                        
+                        for (int i = 1; i <= maxAngle; i++) {
+                                leftHand.currentAngle = getNextStepAll(startLeftAngle, resultLeft, maxAngle, i);
+                                rightHand.currentAngle = getNextStepAll(startRightAngle, resultRight, maxAngle, i);
+                                allServoHandSpin(pca9685_hand, movementSpeed, leftHand.currentAngle, rightHand.currentAngle, 0);
+                        }
+                    }
+                break;
+                
                 case 2:
-                    /*------------Idle animation after 3 minutes-------------------------------------------------------------*/
                     if (hold3mod == 3){
-                            for (int i = 0; i < 4; i++) { // Loop through the number of frames
-                                    resultLeft = hold3Anim3Lead(i); // Get the next angle for the left hand in the current animation
-                                    resultRight = hold3Anim3Support(i); // Get the next angle for the right hand in the current animation
-                                    int movementSpeed = 20; // Set the speed
-                                    int maxAngleLeft = getMaxAngle(leftHand.currentAngle, resultLeft); // Calculate the maximum deviation angle for the left hand
-                                    int maxAngleRight = getMaxAngle(rightHand.currentAngle, resultRight); // Calculate the maximum deviation angle for the right hand
-                                    int maxAngle = maxAngleLeft > maxAngleRight ? maxAngleLeft : maxAngleRight; // Compare and choose the largest angle
-                                    ServosAngle startLeftAngle = leftHand.currentAngle; // Store the current angle of the left hand
-                                    ServosAngle startRightAngle = rightHand.currentAngle; // Store the current angle of the right hand
+                            for (int i = 0; i < 4; i++) {
+                                    resultLeft = hold3Anim3Lead(i);
+                                    resultRight = hold3Anim3Support(i);
+                                    int movementSpeed = 20;
+                                    int maxAngleLeft = getMaxAngle(leftHand.currentAngle, resultLeft);
+                                    int maxAngleRight = getMaxAngle(rightHand.currentAngle, resultRight);
+                                    int maxAngle = maxAngleLeft > maxAngleRight ? maxAngleLeft : maxAngleRight;
+                                    ServosAngle startLeftAngle = leftHand.currentAngle;
+                                    ServosAngle startRightAngle = rightHand.currentAngle;
                                     
-                                    for (int i = 1; i <= maxAngle; i++) { // Loop through the number of steps in the angle change
-                                            leftHand.currentAngle = getNextStepAll(startLeftAngle, resultLeft, maxAngle, i); // Get the next angle for the left hand
-                                            rightHand.currentAngle = getNextStepAll(startRightAngle, resultRight, maxAngle, i); // Get the next angle for the right hand
-                                            allServoHandSpin(pca9685_hand, movementSpeed, leftHand.currentAngle, rightHand.currentAngle, 0); // Rotate to the specified angle
+                                    for (int i = 1; i <= maxAngle; i++) {
+                                            leftHand.currentAngle = getNextStepAll(startLeftAngle, resultLeft, maxAngle, i);
+                                            rightHand.currentAngle = getNextStepAll(startRightAngle, resultRight, maxAngle, i);
+                                            allServoHandSpin(pca9685_hand, movementSpeed, leftHand.currentAngle, rightHand.currentAngle, 0);
                                     }
                             }
-                    state = 6; // Set the state to 6, likely indicating idle or a default state
-    }
+                    osMutexAcquire(UARTDataMutexHandle, osWaitForever);
+                    state = 6;
+                    osMutexRelease(UARTDataMutexHandle);
+                    }
                     break;
+                    
                 case 3:
-                    /*------------Idle animations after 10 minutes-------------------------------------------------------------*/
                     if (hold10mod == 1){
                         for (int i = 0; i < 2; i++) {
                             resultLeft = hold10Anim1Lead_Hand(i);
                             resultRight = hold10Anim1Support_Hand(i);
-                            int movementSpeed = 20;//40
+                            int movementSpeed = 20;
                             int maxAngleLeft = getMaxAngle(leftHand.currentAngle,resultLeft);
                             int maxAngleRight = getMaxAngle(rightHand.currentAngle,resultRight);
                             int maxAngle = maxAngleLeft>maxAngleRight ? maxAngleLeft : maxAngleRight;
@@ -2675,7 +2460,9 @@ void StartHandServoControlTask(void *argument)
                             }
                         osDelay(4000);
                         }
+                        osMutexAcquire(UARTDataMutexHandle, osWaitForever);
                         state=6;
+                        osMutexRelease(UARTDataMutexHandle);
                     }
                     if (hold10mod == 2){
                         for (int i = 0; i < 2; i++) {
@@ -2694,7 +2481,9 @@ void StartHandServoControlTask(void *argument)
                             }
                         osDelay(4000);
                         }
+                        osMutexAcquire(UARTDataMutexHandle, osWaitForever);
                         state=6;
+                        osMutexRelease(UARTDataMutexHandle);
                     }
                     if (hold10mod == 3){
                         for (int i = 0; i < 4; i++) {
@@ -2712,11 +2501,13 @@ void StartHandServoControlTask(void *argument)
                                 allServoHandSpin(pca9685_hand,movementSpeed,leftHand.currentAngle,rightHand.currentAngle,0);
                             }
                         }
+                        osMutexAcquire(UARTDataMutexHandle, osWaitForever);
                         state=6;
+                        osMutexRelease(UARTDataMutexHandle);
                     }
                     break;
+                    
                 case 5:
-                    /*------------Hand waving animations-------------------------------------------------------------*/
                     for (int i = 0; i < 5; i++) {
                         int leftLegDev=0;
                         int rightLegDev = 0;
@@ -2743,14 +2534,16 @@ void StartHandServoControlTask(void *argument)
                         }
 
                     }
+                    osMutexAcquire(UARTDataMutexHandle, osWaitForever);
                     state = 6;
+                    osMutexRelease(UARTDataMutexHandle);
                     break;
+                    
                 case 8:
-                    /*------------calibration-------------------------------------------------------------*/
                         allServoHandSpin(pca9685_hand,400,leftHand.calibrationAngle, rightHand.calibrationAngle,0);
                 break;
+                
                 case 9:
-                    /*----------------loading default values ??from the server via UART when the hut starts working----------------------------*/
                     osMutexAcquire(UARTDataMutexHandle, osWaitForever);
                     leftHand.calibrationAngle.A = calibrationAngles[10];
                     leftHand.defaultAngle.A = leftHand.calibrationAngle.A;
@@ -2775,12 +2568,13 @@ void StartHandServoControlTask(void *argument)
                     rightHand.defaultAngle.E = rightHand.calibrationAngle.E;
                     osMutexRelease(UARTDataMutexHandle);
                 break;
+                
                 case 11:
                     for (int j=0;j<3;j++){
                         for (int k = 0; k < 2; k++) {
                             resultLeft = boxAnimLead_Hand(k);
                             resultRight = boxAnimSupport_Hand(k);
-                            int movementSpeed = 5;//40
+                            int movementSpeed = 5;
                             int maxAngleLeft = getMaxAngle(leftHand.currentAngle,resultLeft);
                             int maxAngleRight = getMaxAngle(rightHand.currentAngle,resultRight);
                             int maxAngle = maxAngleLeft>maxAngleRight ? maxAngleLeft : maxAngleRight;
@@ -2794,16 +2588,16 @@ void StartHandServoControlTask(void *argument)
                         osDelay(100);
                         }
                     }
+                    osMutexAcquire(UARTDataMutexHandle, osWaitForever);
                     state=6;
+                    osMutexRelease(UARTDataMutexHandle);
                 break;    
+                
                 case 12:
                     for (int k = 0; k < 10; k++) {
                         resultLeft = danceAnimLead_Hand(k);
                         resultRight = danceAnimSupport_Hand(k);
-                        int movementSpeed = 10;//40
-                        /*if (k>=4&&k<=9){
-                            movementSpeed = 20;//40
-                        }*/
+                        int movementSpeed = 10;
                         int maxAngleLeft = getMaxAngle(leftHand.currentAngle,resultLeft);
                         int maxAngleRight = getMaxAngle(rightHand.currentAngle,resultRight);
                         int maxAngle = maxAngleLeft>maxAngleRight ? maxAngleLeft : maxAngleRight;
@@ -2814,11 +2608,12 @@ void StartHandServoControlTask(void *argument)
                             rightHand.currentAngle = getNextStepAll(startRightAngle,resultRight,maxAngle,i);
                             allServoHandSpin(pca9685_hand,movementSpeed,leftHand.currentAngle,rightHand.currentAngle,0);
                         }
-                    //osDelay(1000);
                     }
-                state=6;
+                    osMutexAcquire(UARTDataMutexHandle, osWaitForever);
+                    state=6;
+                    osMutexRelease(UARTDataMutexHandle);
                 break;    
-        }
+            }
             osDelay(1);
         }
   /* USER CODE END StartHandServoControlTask */
@@ -2838,13 +2633,13 @@ void StartMotorControlTask(void *argument)
         int timerLeft,timerRight;
         int dirLeft=-1,dirRight=-1;
         
-        // ????????????? ???-???????????
-        // ???????????? ??????????? ????????????????
-        // Kp=2.0, Ki=0.1, Kd=0.05, dt=0.01s (?????????? ?????? 10ms), max_output=1500
+        // PID controllers initialization
+        // Coefficients are selected experimentally
+        // Kp=2.0, Ki=0.1, Kd=0.05, dt=0.01s (update every 10ms), max_output=1500
         PID_Init(&pid_motor1, 2.0f, 0.1f, 0.05f, 0.01f, 1500.0f);
         PID_Init(&pid_motor2, 2.0f, 0.1f, 0.05f, 0.01f, 1500.0f);
         
-        // ????? ?????????? ?????????? ???
+        // Last PID update time
         last_pid_update = HAL_GetTick();
         
         // Connecting motors in the caterpillars with speed control
@@ -2861,89 +2656,82 @@ void StartMotorControlTask(void *argument)
         /* Infinite loop */
         for(;;)
         {
-            // ?????? ??????? ??? ???
+            // Calculate time for PID
             uint32_t current_time = HAL_GetTick();
-            float dt = (current_time - last_pid_update) / 1000.0f; // ? ????????
+            float dt = (current_time - last_pid_update) / 1000.0f; // in seconds
             
-            // ????????? ??????? ???????? ??? (???? ????? ??? ???)
+            // Get current PWM values (if needed for PID)
             float current_pwm1 = __HAL_TIM_GET_COMPARE(&htim1, TIM_CHANNEL_2);
             float current_pwm2 = __HAL_TIM_GET_COMPARE(&htim1, TIM_CHANNEL_3);
             
-            // ?????????? ??? ?????? 10ms
+            // Update PID every 10ms
             if (dt >= 0.01f) {
                 last_pid_update = current_time;
                 
-                // ???? ????????? ??????? ???????? ? ???-??????????????
-                if (state == 1) {
-                    // ?????????? ? ???
-                    switch(state) {
-                        case 1:
-                            // ??????
-                            if(turnLeft == 1 && turnRight == 1) {
-                                L298N_move_PID(motor1, 1, target_speed1, &pid_motor1, current_pwm1);
-                                L298N_move_PID(motor2, 1, target_speed2, &pid_motor2, current_pwm2);
-                            } 
-                            // ?????  
-                            else if(turnLeft == 0 && turnRight == 0) {
-                                L298N_move_PID(motor1, -1, target_speed1, &pid_motor1, current_pwm1);
-                                L298N_move_PID(motor2, -1, target_speed2, &pid_motor2, current_pwm2);
-                            }
-                            // ??????? ?????
-                            else if(turnLeft == 1 && turnRight == 0) {
-                                L298N_move_PID(motor1, -1, target_speed1, &pid_motor1, current_pwm1);
-                                L298N_move_PID(motor2, 1, target_speed2, &pid_motor2, current_pwm2);
-                            }
-                            // ??????? ??????
-                            else if(turnLeft == 0 && turnRight == 1) {
-                                L298N_move_PID(motor1, 1, target_speed1, &pid_motor1, current_pwm1);
-                                L298N_move_PID(motor2, -1, target_speed2, &pid_motor2, current_pwm2);
-                            }
-                            break;
+                int current_state = state;
+                // If state requires movement with PID control
+                if (current_state == 1) {
+                    // Control with PID
+                    // FORWARD
+                    if(turnLeft == 1 && turnRight == 1) {
+                        L298N_move_PID(motor1, 1, target_speed1, &pid_motor1, current_pwm1);
+                        L298N_move_PID(motor2, 1, target_speed2, &pid_motor2, current_pwm2);
+                    } 
+                    // BACKWARD  
+                    else if(turnLeft == 0 && turnRight == 0) {
+                        L298N_move_PID(motor1, -1, target_speed1, &pid_motor1, current_pwm1);
+                        L298N_move_PID(motor2, -1, target_speed2, &pid_motor2, current_pwm2);
+                    }
+                    // TURN LEFT
+                    else if(turnLeft == 1 && turnRight == 0) {
+                        L298N_move_PID(motor1, -1, target_speed1, &pid_motor1, current_pwm1);
+                        L298N_move_PID(motor2, 1, target_speed2, &pid_motor2, current_pwm2);
+                    }
+                    // TURN RIGHT
+                    else if(turnLeft == 0 && turnRight == 1) {
+                        L298N_move_PID(motor1, 1, target_speed1, &pid_motor1, current_pwm1);
+                        L298N_move_PID(motor2, -1, target_speed2, &pid_motor2, current_pwm2);
                     }
                 } else {
-                    // ??? ?????? ????????? ?????????? ??????? ??????????
-                    switch(state) {
-                        case 4:
-                            if (hold3mod == 1) {
-                                // ???????? ?? ????? ?????
-                                if(turnLeft == 1 && turnRight == 0) {
-                                    L298N_move(motor1, 1, 400);
-                                    L298N_move(motor2, -1, 700);
-                                } 
-                                // ???????? ?? ????? ??????
-                                else if(turnLeft == 0 && turnRight == 1) {
-                                    L298N_move(motor1, -1, 400);
-                                    L298N_move(motor2, 1, 700);
-                                }
+                    // For other states use normal control
+                    if (current_state == 4) {
+                        if (hold3mod == 1) {
+                            // Rotate in place left
+                            if(turnLeft == 1 && turnRight == 0) {
+                                L298N_move(motor1, 1, 400);
+                                L298N_move(motor2, -1, 700);
+                            } 
+                            // Rotate in place right
+                            else if(turnLeft == 0 && turnRight == 1) {
+                                L298N_move(motor1, -1, 400);
+                                L298N_move(motor2, 1, 700);
                             }
-                            break;
-
-                        case 12:
-                            // ??? ????? ?????????? ????????????? ???????? ??? ???
-                            osDelay(4000);
-                            L298N_move(motor1, 1, 400);
-                            L298N_move(motor2, -1, 700);
-                           
-                            L298N_move(motor1, 1, 400);
-                            L298N_move(motor2, -1, 700);
-                            
-                            L298N_move(motor1, -1, 400);
-                            L298N_move(motor2, -1, 700);
-                            osDelay(4000);
-                            
-                            L298N_move(motor1, 1, 400);
-                            L298N_move(motor2, 1, 700);
-                            osDelay(4000);
-                            osDelay(10000);
-                            break;
-
-                        case 6:
-                            // ???? - ?????????? ???
-                            L298N_move(motor1, 0, 0);
-                            L298N_move(motor2, 0, 0);
-                            PID_Reset(&pid_motor1);
-                            PID_Reset(&pid_motor2);
-                            break;
+                        }
+                    }
+                    else if (current_state == 12) {
+                        // For dance use fixed values without PID
+                        osDelay(4000);
+                        L298N_move(motor1, 1, 400);
+                        L298N_move(motor2, -1, 700);
+                       
+                        L298N_move(motor1, 1, 400);
+                        L298N_move(motor2, -1, 700);
+                        
+                        L298N_move(motor1, -1, 400);
+                        L298N_move(motor2, -1, 700);
+                        osDelay(4000);
+                        
+                        L298N_move(motor1, 1, 400);
+                        L298N_move(motor2, 1, 700);
+                        osDelay(4000);
+                        osDelay(10000);
+                    }
+                    else if (current_state == 6) {
+                        // Stop - reset PID
+                        L298N_move(motor1, 0, 0);
+                        L298N_move(motor2, 0, 0);
+                        PID_Reset(&pid_motor1);
+                        PID_Reset(&pid_motor2);
                     }
                 }
             }
@@ -2976,7 +2764,7 @@ void StartMotorControlTask(void *argument)
                     L298N_move_without_PWM(motor_hand2, 0);
             }
 
-            osDelay(10); // ???????? ??? ???-?????????? (10ms)
+            osDelay(10); // Delay for PID controller (10ms)
         }
   /* USER CODE END StartMotorControlTask */
 }

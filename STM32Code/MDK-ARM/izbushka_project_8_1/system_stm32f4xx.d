@@ -9,7 +9,7 @@ izbushka_project_8_1\system_stm32f4xx.o: ../Drivers/CMSIS/Include/cmsis_armcc.h
 izbushka_project_8_1\system_stm32f4xx.o: ../Drivers/CMSIS/Include/mpu_armv7.h
 izbushka_project_8_1\system_stm32f4xx.o: ../Drivers/CMSIS/Device/ST/STM32F4xx/Include/system_stm32f4xx.h
 izbushka_project_8_1\system_stm32f4xx.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h
-izbushka_project_8_1\system_stm32f4xx.o: ../Core/Inc/stm32f4xx_hal_conf.h
+izbushka_project_8_1\system_stm32f4xx.o: ..\Core\Inc\stm32f4xx_hal_conf.h
 izbushka_project_8_1\system_stm32f4xx.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rcc.h
 izbushka_project_8_1\system_stm32f4xx.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_def.h
 izbushka_project_8_1\system_stm32f4xx.o: ../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f4xx.h
