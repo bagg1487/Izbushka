@@ -4,5 +4,5 @@ __pycache__/
 *.pyc
 *.pyo
 *.task
-.DS_Store
+*.DS_Store
 *.code-workspace

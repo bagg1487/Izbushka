@@ -1,7 +1,10 @@
 # Сервер на orange pi
-Новейшая версия [сервера](https://github.com/bagg1487/Izbushka/tree/main/OpiServer/server_final_new/Server_final)
+
+Актуальная версия [сервера](https://github.com/bagg1487/Izbushka/tree/main/OpiServer/server_final_new/Server_final)
 
 Сервер от [организатора](https://github.com/bagg1487/Izbushka/tree/main/OpiServer/Organizers/Server_final_1.5/Server_final)
+
+Тесты функциональности [сервера](https://github.com/bagg1487/Izbushka/tree/final-izba/OpiServer/Test)
 
 Функциональность нашего сервера:
 - *Server.py* - прием команд по TCP и передача видео с камеры
@@ -61,24 +64,29 @@
 
 ## Содержание
 
-1. [Структура сервера](#1-структура-сервера)
-2. [Многопоточность](#2-многопоточность)
-3. [main.py](#3-mainpy)
-4. [Server.py](#4-serverpy)
-5. [Service.py](#5-servicepy)
-6. [GeminiAssistant.py](#6-geminiassistantpy)
-7. [Recognizer.py](#7-recognizerpy)
-8. [Speaker.py](#8-speakerpy)
-9. [UART.py](#9-uartpy)
-10. [ServoControl.py](#10-servocontrolpy)
-11. [Command.py](#11-commandpy)
-12. [KeyPhraseAnalizer.py](#12-keyphraseanalizerpy)
-13. [MusicPlayer.py / VideoPlayer.py / RadioPlayer.py](#13-musicplayerpy--videoplayerpy--radioplayerpy)
-14. [FaceAction.py / Face.py](#14-faceactionpy--facepy)
-15. [HandAndFingerDetectionModule.py](#15-handandfingerdetectionmodulepy)
-16. [RockPapperScrissor.py](#16-rockpapperscrissorpy)
-17. [PlayVideoViaBrowser.py](#17-playvideoviabrowserpy)
-18. [server_interface.py](#18-server_interfacepy)
+- [Сервер на orange pi](#сервер-на-orange-pi)
+- [Работа сервера:](#работа-сервера)
+- [Многопоточность сервера](#многопоточность-сервера)
+  - [Содержание](#содержание)
+  - [1. Структура сервера](#1-структура-сервера)
+  - [2. Многопоточность](#2-многопоточность)
+- [Описание файлов](#описание-файлов)
+  - [3. *main.py*](#3-mainpy)
+  - [4. *Server.py*](#4-serverpy)
+  - [5. *Service.py*](#5-servicepy)
+  - [6. GeminiAssistant.py](#6-geminiassistantpy)
+  - [7. Recognizer.py](#7-recognizerpy)
+  - [8. Speaker.py](#8-speakerpy)
+  - [9. UART.py](#9-uartpy)
+  - [10. ServoControl.py](#10-servocontrolpy)
+  - [11. Command.py](#11-commandpy)
+  - [12. KeyPhraseAnalizer.py](#12-keyphraseanalizerpy)
+  - [13. MusicPlayer.py / VideoPlayer.py / RadioPlayer.py](#13-musicplayerpy--videoplayerpy--radioplayerpy)
+  - [14. FaceAction.py / Face.py](#14-faceactionpy--facepy)
+  - [15. HandAndFingerDetectionModule.py](#15-handandfingerdetectionmodulepy)
+  - [16. RockPapperScrissor.py](#16-rockpapperscrissorpy)
+  - [17. PlayVideoViaBrowser.py](#17-playvideoviabrowserpy)
+  - [18. server\_interface.py](#18-server_interfacepy)
 
 ---
 

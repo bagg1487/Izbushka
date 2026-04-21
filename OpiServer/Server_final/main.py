@@ -7,6 +7,9 @@ import random
 import signal
 from os import path
 
+from dotenv import load_dotenv
+load_dotenv()
+
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QApplication, QMainWindow
 from PyQt5.QtCore import QTimer, QSize, Qt, QEvent, pyqtSignal

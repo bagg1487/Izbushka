@@ -1,10 +1,13 @@
 import google.generativeai as genai
 import requests
+import os
 
 class GeminiAssistant:
     def __init__(self):
         # Твой ключ
-        self.api_key = "AIzaSyAYw-CAhuXWjsp6qbb782QhxSm0MuThcbc"
+        self.api_key = os.getenv("GEMINI_API_KEY")
+        if not self.api_key:
+            raise ValueError("Переменная окружения GEMINI_API_KEY не установлена")
         genai.configure(api_key=self.api_key)
 
         try:
