@@ -1,1 +1,0 @@
-..\venv\Scripts\pyuic5.exe -x ui_calibration.ui -o ui_calibration.py
