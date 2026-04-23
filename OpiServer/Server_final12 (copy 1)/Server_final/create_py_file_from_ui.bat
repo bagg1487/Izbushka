@@ -1,1 +1,0 @@
-..\venv\Scripts\pyuic5.exe -x server_interface.ui -o server_interface.py
