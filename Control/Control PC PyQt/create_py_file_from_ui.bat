@@ -1,1 +1,0 @@
-pyuic5.exe -x ui_client.ui -o Ui_client.py
