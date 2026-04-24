@@ -1,0 +1,8 @@
+.env
+.idea
+__pycache__/
+*.pyc
+*.pyo
+*.task
+*.DS_Store
+*.code-workspace
