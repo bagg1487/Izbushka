@@ -2,20 +2,16 @@
 
 ---
 
-[Face](./Face) - проект лица Избушки
+## Управление Избушкой
 
-[ArduinoSensor](./ArduinoSensor) - проект получения значений температуры и влажности с датчика, подключенного к Arduino
+**3 способа управления:**
 
-[STM32Code](./STM32Code) - Код на STM32 для получения информации с датчиков приближения и гироскопа (через CubeMX и Keil)
-
-[STM32Arduino](./STM32Arduino) - Код на STM32, разработка своего проекта
-
-[OpiServer](./OpiServer) - сервер на OrangePi для управления избушкой
-
-[Control](./Control) - код для управления избушкой через ПК/телефон
+- Управление с помощью [PyQt](<Control/Control PC PyQt>)
+- Управление с помощью [Web](<Control/Control PC Web>)
+- Управление с помощью [телефона (Android)](<Control/Control Phone>)
 
 ---
 
-# В планах
+# Главный проект Избушка
 
 ![](https://github.com/Darkness1853/Pictures/blob/main/p1/photo_2026-02-25_19-30-27.jpg)
