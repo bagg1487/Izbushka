@@ -1,5 +1,11 @@
 # Разработка конструктора "Избушка"
 
+Официальный сайт [производителя](https://ios.ru/)
+
+Схемы подключений / Детали и платы: [ссылка](https://per-aspera-ad-astra.yonote.ru/share/0db69263-ea7f-4abc-83ab-f3f2ef4d6521)
+
+![](https://github.com/user-attachments/assets/4911f40a-9f19-446c-b3a1-acf0d9c8e707)
+
 ---
 
 [Face](./Face) - проект лица Избушки
