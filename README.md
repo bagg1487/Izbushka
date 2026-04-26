@@ -12,6 +12,8 @@
 
 ---
 
+## Инструкция по управлени
+
 # Главный проект Избушка
 
 ![](https://github.com/Darkness1853/Pictures/blob/main/p1/photo_2026-02-25_19-30-27.jpg)
