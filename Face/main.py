@@ -378,14 +378,24 @@ async def text_command(data: TextCommand):
 
 # ==================== ГОЛОСОВОЙ ПРОЦЕССОР ====================
 def start_voice_processor():
+
+    try:
+        import speech_recognition as sr
+        if len(sr.Microphone.list_microphone_names()) == 0:
+            raise RuntimeError("Микрофоны не найдены")
+    except Exception:
+        print("⚠️ Микрофон не найден, голосовые команды недоступны")
+        while True:
+            time.sleep(1) 
+        return
+    
     try:
         from audio import VoiceProcessor
-        vp = VoiceProcessor()
-        vp.listen()
+        VoiceProcessor().listen()
     except Exception as e:
         print(f"⚠️ Голосовой процессор не запущен: {e}")
-    while True:
-        time.sleep(1)
+        while True:
+            time.sleep(1)  
 
 # ==================== ЗАПУСК ====================
 if __name__ == "__main__":
