@@ -1,19 +1,16 @@
 import google.generativeai as genai
 import requests
-import os
 
 class GeminiAssistant:
     def __init__(self):
         # Твой ключ
-        self.api_key = os.getenv("GEMINI_API_KEY")
-        if not self.api_key:
-            raise ValueError("Переменная окружения GEMINI_API_KEY не установлена")
+        self.api_key = "qwer"
         genai.configure(api_key=self.api_key)
 
         try:
             # Пытаемся подключить модель 2.5
             self.model = genai.GenerativeModel('gemini-2.5-flash-lite')
-        except:
+        except: 
             # Если нет, откатываемся на 1.5
             self.model = genai.GenerativeModel('gemini-2.5-flash')
 
