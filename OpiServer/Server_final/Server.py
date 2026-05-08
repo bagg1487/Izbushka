@@ -81,10 +81,77 @@ class Server:
         except:
             pass
 
+    def check_server_status(self):
+        import socket
+        
+        status = {
+            'command_server': False,
+            'video_server': False,
+            'clients': {'command': None, 'video': None}
+        }
+        
+        print("\n" + "="*50)
+        print("ДИАГНОСТИКА СЕРВЕРА")
+        print("="*50)
+        
+        try:
+            test_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            test_sock.settimeout(0.5)
+            result = test_sock.connect_ex(('127.0.0.1', 5001))
+            test_sock.close()
+            
+            if result == 0:
+                status['command_server'] = True
+                print("✅ Сервер команд: АКТИВЕН (порт 5001)")
+            else:
+                print("❌ Сервер команд: НЕ АКТИВЕН (порт 5001)")
+                
+            if hasattr(self, 'connection1') and self.connection1:
+                try:
+                    self.connection1.send(b"ping\n")
+                    status['clients']['command'] = True
+                    print("✅ Клиент команд: ПОДКЛЮЧЕН")
+                except:
+                    print("⚠️ Клиент команд: НЕ ПОДКЛЮЧЕН")
+            else:
+                print("⚠️ Клиент команд: НЕТ СОЕДИНЕНИЯ")
+                
+        except Exception as e:
+            print(f"❌ Ошибка проверки сервера команд: {e}")
+        
+        try:
+            test_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            test_sock.settimeout(0.5)
+            result = test_sock.connect_ex(('127.0.0.1', 8001))
+            test_sock.close()
+            
+            if result == 0:
+                status['video_server'] = True
+                print("✅ Видео сервер: АКТИВЕН (порт 8001)")
+            else:
+                print("❌ Видео сервер: НЕ АКТИВЕН (порт 8001)")
+                
+            if hasattr(self, 'connection') and self.connection:
+                status['clients']['video'] = True
+                print("✅ Клиент видео: ПОДКЛЮЧЕН")
+            else:
+                print("⚠️ Клиент видео: НЕ ПОДКЛЮЧЕН")
+                
+        except Exception as e:
+            print(f"❌ Ошибка проверки видео сервера: {e}")
+        
+        print("="*50 + "\n")
+        return status
+
     def turn_on_server(self):
         HOST = self.get_internet_accessible_ip()
         if not HOST:
             HOST = '0.0.0.0'
+        
+        print(f"\n[DEBUG] ЗАПУСК СЕРВЕРА")
+        print(f"[DEBUG] Хост: {HOST}")
+        print(f"[DEBUG] Порт команд: 5001")
+        print(f"[DEBUG] Порт видео: 8001")
 
         self.server_socket = socket.socket()
         self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -93,19 +160,28 @@ class Server:
 
         try:
             self.server_socket.bind((HOST, 8001))
-        except OSError:
+            print(f"[DEBUG] Видео сервер привязан к {HOST}:8001")
+        except OSError as e:
+            print(f"[DEBUG] Ошибка привязки к {HOST}:8001: {e}")
             self.server_socket.bind(('', 8001))
+            print(f"[DEBUG] Видео сервер привязан к 0.0.0.0:8001")
+        
         self.server_socket.listen(1)
+        print(f"[DEBUG] Видео сервер слушает порт 8001")
 
         self.server_socket1 = socket.socket()
         self.server_socket1.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
             self.server_socket1.bind((HOST, 5001))
-        except OSError:
+            print(f"[DEBUG] Командный сервер привязан к {HOST}:5001")
+        except OSError as e:
+            print(f"[DEBUG] Ошибка привязки к {HOST}:5001: {e}")
             self.server_socket1.bind(('', 5001))
+            print(f"[DEBUG] Командный сервер привязан к 0.0.0.0:5001")
+        
         self.server_socket1.listen(1)
-
-        print('Server address: ' + str(HOST))
+        print(f"[DEBUG] Командный сервер слушает порт 5001")
+        print('[DEBUG] Сервер запущен и ожидает подключения...')
 
         self.running = True
         self.video_capture_thread = threading.Thread(target=self.capture_video, daemon=True)
@@ -117,6 +193,7 @@ class Server:
         self.instruction_thread.start()
 
     def turn_off_server(self):
+        print("[DEBUG] Выключение сервера...")
         self.running = False
         time.sleep(0.5)
 
@@ -126,8 +203,9 @@ class Server:
             if hasattr(self, 'connection_file'): self.connection_file.close()
             if hasattr(self, 'server_socket'): self.server_socket.close()
             if hasattr(self, 'server_socket1'): self.server_socket1.close()
-        except:
-            pass
+            print("[DEBUG] Сервер остановлен")
+        except Exception as e:
+            print(f"[DEBUG] Ошибка при остановке: {e}")
 
     def get_internet_accessible_ip(self):
         try:
@@ -138,6 +216,8 @@ class Server:
             return ip_address
         except Exception as e:
             return None
+
+    
 
     def reset_server(self):
         self.turn_off_server()
@@ -164,6 +244,7 @@ class Server:
         except:
             pass
 
+        print("[DEBUG] Поток захвата видео запущен")
         while self.running:
             ret, frame = cap.read()
             if ret:
@@ -171,15 +252,19 @@ class Server:
                     self.frame_row = frame
 
         cap.release()
+        print("[DEBUG] Поток захвата видео остановлен")
 
     def transmission_video(self):
+        print("[DEBUG] Ожидание подключения к видео серверу (порт 8001)...")
         try:
             self.connection, self.client_address = self.server_socket.accept()
             self.connection.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
             self.connection.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 262144)
             self.connection_file = self.connection.makefile('wb')
             self.video_transmit_trig = 1
+            print(f"[DEBUG] Клиент видео подключен! Адрес: {self.client_address}")
         except Exception as e:
+            print(f"[DEBUG] Ошибка подключения видео клиента: {e}")
             return
 
         while self.running:
@@ -204,6 +289,7 @@ class Server:
                     time.sleep(0.03)
 
             except BrokenPipeError:
+                print("[DEBUG] Видео соединение разорвано")
                 break
             except Exception as e:
                 time.sleep(0.1)
@@ -213,21 +299,27 @@ class Server:
             self.connection_file.close()
         except:
             pass
+        print("[DEBUG] Поток передачи видео остановлен")
 
     def receive_instruction(self):
+        print("[DEBUG] Ожидание подключения к командному серверу (порт 5001)...")
         try:
             self.connection1, self.client_address1 = self.server_socket1.accept()
+            print(f"[DEBUG] Клиент команд подключен! Адрес: {self.client_address1}")
             self.instruction_active_flag = True
-        except:
+        except Exception as e:
+            print(f"[DEBUG] Ошибка подключения клиента команд: {e}")
             return
 
         while self.running:
             try:
                 allData = self.connection1.recv(1024).decode('utf-8')
                 if not allData:
+                    print("[DEBUG] Потеряно соединение с клиентом команд. Перезапуск сервера...")
                     self.reset_server()
                     break
 
+                print(f"[DEBUG] Получена команда: {allData.strip()}")
                 cmdArray = allData.split('\n')
 
                 for oneCmd in cmdArray:
@@ -300,9 +392,11 @@ class Server:
                             pass
 
             except Exception as e:
+                print(f"[DEBUG] Ошибка в receive_instruction: {e}")
                 break
 
         self.instruction_active_flag = False
+        print("[DEBUG] Поток приема команд остановлен")
 
     def takeCommand(self):
         self.service.speach_rec.wishMe()
