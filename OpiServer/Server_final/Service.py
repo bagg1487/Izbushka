@@ -20,20 +20,20 @@ from enum import Enum
 class LEDMode(Enum):
     RADIO = "radio"
     ABOUT_ME = "about_me"
-    VIDEO = "video"
     MUSIC = "music"
     NEURO_TALK = "neuro_talk"
     IDLE = "idle"
+    VIDEO_TRANSMISSION = "video_transmission"
 
 
 class LEDController:
     COLORS = {
         LEDMode.RADIO: (0, 255, 0),
         LEDMode.ABOUT_ME: (255, 0, 0),
-        LEDMode.VIDEO: (0, 0, 255),
         LEDMode.MUSIC: (255, 255, 0),
         LEDMode.NEURO_TALK: (255, 0, 255),
-        LEDMode.IDLE: (128, 128, 128)
+        LEDMode.IDLE: (128, 128, 128),
+        LEDMode.VIDEO_TRANSMISSION: (0, 0, 255)
     }
 
     def __init__(self, uart_instance):

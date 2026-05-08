@@ -5,6 +5,7 @@ import threading
 import time
 import subprocess
 import os
+from Service import LEDMode
 
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import Qt
@@ -350,11 +351,23 @@ class Server:
                         self.send_data(self.connection1, f"{cmd.CMD_UART}#{status}\n")
 
                     elif any(c in data for c in [cmd.CMD_MOVE_FORWARD, cmd.CMD_MOVE_BACKWARD, cmd.CMD_MOVE_LEFT,
-                                                 cmd.CMD_MOVE_RIGHT, cmd.CMD_MOVE_STOP, cmd.CMD_HEAD,
-                                                 cmd.CMD_HANDS_UP, cmd.CMD_CLENCH_LEFT, cmd.CMD_CLENCH_RIGHT,
-                                                 cmd.CMD_LOOK_UP, cmd.CMD_LOOK_DOWN, cmd.CMD_LOOK_STOP]):
+                                                cmd.CMD_MOVE_RIGHT, cmd.CMD_MOVE_STOP, cmd.CMD_HEAD,
+                                                cmd.CMD_HANDS_UP, cmd.CMD_CLENCH_LEFT, cmd.CMD_CLENCH_RIGHT,
+                                                cmd.CMD_LOOK_UP, cmd.CMD_LOOK_DOWN, cmd.CMD_LOOK_STOP]):
                         if self.uart.uart_connection_flag:
                             self.uart.serial_send(oneCmd + "\n")
+
+                    elif cmd.CMD_VIDEO_TRANSMISSION in data:
+                        try:
+                            param = int(data[1])
+                            if param == 1:
+                                self.service.led_controller.add_mode(LEDMode.VIDEO_TRANSMISSION)
+                                print(f"[DEBUG] LED: Включен режим VIDEO_TRANSMISSION")
+                            elif param == 0:
+                                self.service.led_controller.remove_mode(LEDMode.VIDEO_TRANSMISSION)
+                                print(f"[DEBUG] LED: Выключен режим VIDEO_TRANSMISSION")
+                        except (IndexError, ValueError) as e:
+                            print(f"[DEBUG] Ошибка параметра VIDEO_TRANSMISSION: {e}")
 
                     elif cmd.CMD_MUSIC_PLAY in data:
                         self.service.start_music()
