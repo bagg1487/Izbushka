@@ -96,6 +96,7 @@ class Server:
         print("="*50)
         
         try:
+            
             test_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             test_sock.settimeout(0.5)
             result = test_sock.connect_ex(('127.0.0.1', 5001))
@@ -109,6 +110,7 @@ class Server:
                 
             if hasattr(self, 'connection1') and self.connection1:
                 try:
+                    self.service/led_controller/_send_led_command(128,128,128)
                     self.connection1.send(b"ping\n")
                     status['clients']['command'] = True
                     print("✅ Клиент команд: ПОДКЛЮЧЕН")
@@ -198,6 +200,7 @@ class Server:
         self.running = False
         time.sleep(0.5)
 
+        self.service.led_controller._send_led_command(0,0,0)
         try:
             if hasattr(self, 'connection'): self.connection.close()
             if hasattr(self, 'connection1'): self.connection1.close()
